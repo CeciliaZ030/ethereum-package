@@ -89,7 +89,7 @@ def launch(
 
     cl_client_name = service_name.split("-")[3]
 
-    (config, ipc_files) = get_config(
+    (config, ipc_artifacts) = get_config(
         plan,
         launcher,
         image,
@@ -138,7 +138,7 @@ def launch(
         ws_url,
         service_name,
         [reth_metrics_info],
-        ipc_files,
+        ipc_artifacts,
     )
 
 
@@ -186,9 +186,9 @@ def get_config(
             constants.METRICS_PORT_ID: public_ports_for_component[4],
         }
         if launcher.gwyneth:
-            for (i, network) in enumerate(launcher.el_l2_networks):
+            for (i, l2_network) in enumerate(launcher.el_l2_networks):
                 additional_public_port_assignments.update({
-                    "{0}-{1}".format(constants.L2_RPC_PORT_ID, network): public_ports_for_component[5 + i]
+                    "{0}-{1}".format(constants.L2_RPC_PORT_ID, l2_network): public_ports_for_component[5 + i]
                 }) 
         # Convert all to PortSpecs struct
         public_ports.update(
@@ -205,6 +205,7 @@ def get_config(
     }
 
     cmd = [
+        "ls -l /tmp/ && ",
         "/usr/local/bin/mev build" if builder else "reth",
         "node",
         "-{0}".format(verbosity_level),
@@ -233,6 +234,7 @@ def get_config(
         "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
         "--discovery.port={0}".format(discovery_port),
         "--port={0}".format(discovery_port),
+        "--ipcdisable"
     ]
 
     if network == constants.NETWORK_NAME.kurtosis:
@@ -281,7 +283,7 @@ def get_config(
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
 
 
-    ipc_files = []
+    ipc_artifacts = []
     if launcher.gwyneth:
         if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
             fail("The number of L2 networks and volumes must be the same")
@@ -289,33 +291,35 @@ def get_config(
         cmd_datadirs = ["--l2.datadirs"]
         cmd_ports = ["--l2.ports"]
         cmd_ipcs = ["--l2.ipcs"]
-        for (i, (network, volume)) in enumerate(zip(launcher.el_l2_networks, launcher.el_l2_volumes)):
+        for (i, (l2_network, volume)) in enumerate(zip(launcher.el_l2_networks, launcher.el_l2_volumes)):
             # CHAIN ID
-            cmd_chain_ids.append(network)
+            cmd_chain_ids.append(l2_network)
             # DATA DIR
             # /data/reth/l2-data-160010: data-el-1-gwyneth-lighthouse-160010
-            mount_path = "{0}-{1}".format(L2_DATA_MOUNT, network)
-            cmd_datadirs.append(mount_path)
-            files[mount_path] = Directory(
-                persistent_key="data-{0}-{1}".format(service_name, network),
+            data_mount_path = "{0}-{1}".format(L2_DATA_MOUNT, l2_network)
+            cmd_datadirs.append(data_mount_path)
+            files[data_mount_path] = Directory(
+                persistent_key="data-{0}-{1}".format(service_name, l2_network),
                 size=volume,
             )
             # RPC PORT
             # l2-rpc-160010: 10110
             # the ws port is the rpc port + 100
             cmd_ports.append(str(L2_RPC_PORT_BASE + i))
-            used_port_assignments["{0}-{1}".format(constants.L2_RPC_PORT_ID, network)] = L2_RPC_PORT_BASE + i
+            used_port_assignments["{0}-{1}".format(constants.L2_RPC_PORT_ID, l2_network)] = L2_RPC_PORT_BASE + i
             # IPC FILE
             # /tmp/reth.ipc-160010: /static_files/gwyneth/reth.ipc-160010
-            host_path = "{0}-{1}".format(static_files.L2_IPC_FILEPATH, network)
-            mount_path = "{0}-{1}".format(IPC_MOUNT, network)
-            ipc_file = plan.upload_files(src=host_path, name="reth.ipc-{0}-{1}".format(network, service_name))
-            files[mount_path] = ipc_file
-            cmd_ipcs.append(mount_path)
-            ipc_files.append(ipc_file)
+            ipc_host_path = "{0}-{1}-{2}".format(static_files.L2_IPC_FILEPATH, service_name, l2_network)
+            ipc_mount_path = "{0}-{1}".format(IPC_MOUNT, l2_network)
+            ipc_artifact = plan.upload_files(src=ipc_host_path, name="reth.ipc-{0}-{1}".format(service_name, l2_network))
+            files[ipc_mount_path] = ipc_artifact
+            cmd_ipcs.append(ipc_mount_path)
+            ipc_artifacts.append(ipc_artifact)
             
-        # cmd_str += " " +  " ".join(cmd_chain_ids) + " " + " ".join(cmd_datadirs) + " " + " ".join(cmd_ports) + " " + " ".join(cmd_ipcs)
-    
+        cmd_str += " " +  " ".join(cmd_chain_ids) + " " + " ".join(cmd_datadirs) + " " + " ".join(cmd_ports) + " " + " ".join(cmd_ipcs)
+        plan.print("~~~~~~\n{0}".format(cmd_str))
+
+
     used_ports = shared_utils.get_port_specs(used_port_assignments)
     config = ServiceConfig(
         image=image,
@@ -340,7 +344,7 @@ def get_config(
         tolerations=tolerations,
         node_selectors=node_selectors,
     )
-    return (config, ipc_files)
+    return (config, ipc_artifacts)
 
 
 def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):

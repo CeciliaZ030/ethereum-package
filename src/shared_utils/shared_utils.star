@@ -281,13 +281,15 @@ def __get_port_range(port_start, max_ports_per_component, participant_index):
     return (public_port_start, public_port_end)
 
 
+def is_l2_port_id(port_id):
+    return port_id.startswith(constants.L2_RPC_PORT_ID)
+
 def get_port_specs(port_assignments):
     ports = {}
     for port_id, port in port_assignments.items():
         if port_id in [
             constants.TCP_DISCOVERY_PORT_ID,
             constants.RPC_PORT_ID,
-            constants.L2_RPC_PORT_ID,
             constants.ENGINE_RPC_PORT_ID,
             constants.ENGINE_WS_PORT_ID,
             constants.WS_RPC_PORT_ID,
@@ -295,6 +297,8 @@ def get_port_specs(port_assignments):
             constants.WS_PORT_ID,
             constants.PROFILING_PORT_ID,
         ]:
+            ports.update({port_id: new_port_spec(port, TCP_PROTOCOL)})
+        elif is_l2_port_id(port_id):
             ports.update({port_id: new_port_spec(port, TCP_PROTOCOL)})
         elif port_id == constants.UDP_DISCOVERY_PORT_ID:
             ports.update({port_id: new_port_spec(port, UDP_PROTOCOL)})
