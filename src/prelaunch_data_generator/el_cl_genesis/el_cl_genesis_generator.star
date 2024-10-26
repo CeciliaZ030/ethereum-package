@@ -46,10 +46,11 @@ def generate_el_cl_genesis_data(
 
     files[GENESIS_VALUES_PATH] = genesis_generation_config_artifact_name
 
+    plan.print("~~~~~~~".format(genesis_generation_config_artifact_name))
     genesis = plan.run_sh(
         name="run-generate-genesis",
         description="Creating genesis",
-        run="cp /opt/values.env /config/values.env && ./entrypoint.sh all && mkdir /network-configs && mv /data/metadata/* /network-configs/",
+        run="cp /opt/values.env /config/values.env && cat /config/values.env && ./entrypoint.sh all && mkdir /network-configs && mv /data/metadata/* /network-configs/ && ls -l /network-configs/",
         image=image,
         files=files,
         store=[

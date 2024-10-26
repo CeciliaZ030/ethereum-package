@@ -10,7 +10,7 @@ mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launche
 rbuilder_launcher = import_module("../../mev/gwyneth/rbuilder_launcher.star")
 
 RPC_PORT_NUM = 8545
-L2_RPC_PORT_NUM = 10110
+L2_RPC_PORT_BASE = 10110
 WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
 ENGINE_RPC_PORT_NUM = 8551
@@ -184,8 +184,12 @@ def get_config(
             constants.RPC_PORT_ID: public_ports_for_component[2],
             constants.WS_PORT_ID: public_ports_for_component[3],
             constants.METRICS_PORT_ID: public_ports_for_component[4],
-            constants.L2_RPC_PORT_ID: public_ports_for_component[5],
         }
+        if launcher.gwyneth:
+            for (i, network) in enumerate(launcher.el_l2_networks):
+                additional_public_port_assignments.update({
+                    "{0}-{1}".format(constants.L2_RPC_PORT_ID, network): public_ports_for_component[5 + i]
+                }) 
         # Convert all to PortSpecs struct
         public_ports.update(
             shared_utils.get_port_specs(additional_public_port_assignments)
@@ -196,11 +200,9 @@ def get_config(
         constants.UDP_DISCOVERY_PORT_ID: discovery_port,
         constants.ENGINE_RPC_PORT_ID: ENGINE_RPC_PORT_NUM,
         constants.RPC_PORT_ID: RPC_PORT_NUM,
-        constants.L2_RPC_PORT_ID: L2_RPC_PORT_NUM,
         constants.WS_PORT_ID: WS_PORT_NUM,
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
-    used_ports = shared_utils.get_port_specs(used_port_assignments)
 
     cmd = [
         "/usr/local/bin/mev build" if builder else "reth",
@@ -248,6 +250,7 @@ def get_config(
         network not in constants.PUBLIC_NETWORKS
         and constants.NETWORK_NAME.shadowfork not in network
     ):
+        plan.print("~~~~~~{0}".format(el_cl_genesis_data.files_artifact_uuid))
         cmd.append(
             "--bootnodes="
             + shared_utils.get_devnet_enodes(
@@ -282,18 +285,38 @@ def get_config(
     if launcher.gwyneth:
         if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
             fail("The number of L2 networks and volumes must be the same")
-        for (network, volume) in zip(launcher.el_l2_networks, launcher.el_l2_volumes):
-            files["{0}-{1}".format(L2_DATA_MOUNT, network)] = Directory(
+        cmd_chain_ids = ["--l2.chain_ids"]
+        cmd_datadirs = ["--l2.datadirs"]
+        cmd_ports = ["--l2.ports"]
+        cmd_ipcs = ["--l2.ipcs"]
+        for (i, (network, volume)) in enumerate(zip(launcher.el_l2_networks, launcher.el_l2_volumes)):
+            # CHAIN ID
+            cmd_chain_ids.append(network)
+            # DATA DIR
+            # /data/reth/l2-data-160010: data-el-1-gwyneth-lighthouse-160010
+            mount_path = "{0}-{1}".format(L2_DATA_MOUNT, network)
+            cmd_datadirs.append(mount_path)
+            files[mount_path] = Directory(
                 persistent_key="data-{0}-{1}".format(service_name, network),
                 size=volume,
             )
-            # /tmp/reth.ipc: /static_files/gwyneth/reth.ipc-160010
-            ipc_file_path = "{0}-{1}".format(static_files.L2_IPC_FILEPATH, network)
-            ipc_file = plan.upload_files(src=ipc_file_path, name="reth.ipc-{0}-{1}".format(network, service_name))
-            files["{0}-{1}".format(IPC_MOUNT, network)] = ipc_file
+            # RPC PORT
+            # l2-rpc-160010: 10110
+            # the ws port is the rpc port + 100
+            cmd_ports.append(str(L2_RPC_PORT_BASE + i))
+            used_port_assignments["{0}-{1}".format(constants.L2_RPC_PORT_ID, network)] = L2_RPC_PORT_BASE + i
+            # IPC FILE
+            # /tmp/reth.ipc-160010: /static_files/gwyneth/reth.ipc-160010
+            host_path = "{0}-{1}".format(static_files.L2_IPC_FILEPATH, network)
+            mount_path = "{0}-{1}".format(IPC_MOUNT, network)
+            ipc_file = plan.upload_files(src=host_path, name="reth.ipc-{0}-{1}".format(network, service_name))
+            files[mount_path] = ipc_file
+            cmd_ipcs.append(mount_path)
             ipc_files.append(ipc_file)
-        
-
+            
+        # cmd_str += " " +  " ".join(cmd_chain_ids) + " " + " ".join(cmd_datadirs) + " " + " ".join(cmd_ports) + " " + " ".join(cmd_ipcs)
+    
+    used_ports = shared_utils.get_port_specs(used_port_assignments)
     config = ServiceConfig(
         image=image,
         ports=used_ports, # internal

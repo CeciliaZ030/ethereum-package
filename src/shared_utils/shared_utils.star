@@ -7,7 +7,7 @@ NOT_PROVIDED_APPLICATION_PROTOCOL = ""
 NOT_PROVIDED_WAIT = "not-provided-wait"
 
 MAX_PORTS_PER_CL_NODE = 5
-MAX_PORTS_PER_EL_NODE = 6
+MAX_PORTS_PER_EL_NODE = 7
 MAX_PORTS_PER_VC_NODE = 3
 MAX_PORTS_PER_ADDITIONAL_SERVICE = 2
 
@@ -107,6 +107,8 @@ with open("/network-configs/enodes.txt") as bootnode_file:
 print(",".join(bootnodes), end="")
             """,
     )
+    plan.print("~~~~~~~~~~")
+    plan.print(filename)
     return enode_list.output
 
 
