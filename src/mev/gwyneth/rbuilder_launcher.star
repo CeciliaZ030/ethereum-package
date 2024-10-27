@@ -24,9 +24,7 @@ def launch(
     el_rpc_uri = "http://{0}:{1}".format(el_context.ip_addr, el_context.rpc_port_num)
 
 
-    l2_rpc_ports = {
-        "rbuilder-rpc-l1": L1_RPC_PORT
-    }
+    used_ports = {}
     l2_data_paths = []
     l2_ipc_files = []
     files = {
@@ -39,7 +37,7 @@ def launch(
         l2_data_paths.append(data_mount_path)
         files[data_mount_path] = Directory(persistent_key="data-{0}-{1}".format(el_context.service_name, network))
         l2_ipc_files.append("{0}/l2.ipc-{1}".format(IPC_MOUNT, network))
-        l2_rpc_ports["rbuilder-rpc-l2-{0}".format(network)] = L2_RPC_PORT + i
+        used_ports["rbuilder-rpc-l2-{0}".format(network)] = L2_RPC_PORT + i
     
     config_template_file = read_file(static_files.L2_RBUILDER_CONFIG_FILEPATH)
     template_data = new_rbuilder_template_data(
@@ -48,26 +46,27 @@ def launch(
         el_l2_networks,
         l2_data_paths,
         l2_ipc_files,
-        list(l2_rpc_ports.values()),
+        list(used_ports.values()),
         mev_params
     )
+    plan.print("Rbuilder config {0}".format(template_data))
     template_and_data = shared_utils.new_template_and_data(config_template_file, template_data)
     template_and_data_filepath = {}
     template_and_data_filepath[RBUILDER_CONFIG_NAME] = template_and_data
     config_artifact = plan.render_templates(
         template_and_data_filepath, "rbuilder-config-toml"
     )
-    # /config/config-gwyneth-reth.toml: rbuilder-config-gwyneth-reth
     files["/config"] = config_artifact
     plan.print("Rbuilder config {0}".format(template_data))
 
+    # Add L1_RPC_PORT to used ports after randering the template
+    used_ports["rbuilder-rpc-l1"] = L1_RPC_PORT
+    
     service_config = ServiceConfig(
         image=mev_params.mev_builder_image,
-        ports=shared_utils.get_port_specs(l2_rpc_ports),
+        ports=shared_utils.get_port_specs(used_ports),
         files=files,
-        # entrypoint=["sh", "-c"],
         cmd=[
-            # "tail -f /dev/null"
             "run",
             "/config/{0}".format(RBUILDER_CONFIG_NAME)
         ]
@@ -83,7 +82,7 @@ def new_rbuilder_template_data(
     l2_networks,
     l2_data_paths,
     l2_ipc_files,
-    l2_rpc_ports,
+    used_ports,
     mev_params
 ):
     return {
@@ -95,7 +94,7 @@ def new_rbuilder_template_data(
         "L2ChainIds": l2_networks,
         "L2DataPaths": l2_data_paths,
         "L2IpcPaths": l2_ipc_files,
-        "L2RpcPorts": l2_rpc_ports,
+        "L2RpcPorts": used_ports,
         "L1ProposerPk": mev_params.l1_proposer_pk,
         "L1GwynethAddress": mev_params.l1_gwyneth_address,
     }
