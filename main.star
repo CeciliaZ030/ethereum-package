@@ -312,7 +312,7 @@ def run(plan, args={}):
     elif args_with_right_defaults.mev_type == constants.GWYNETH_MEV_TYPE:
         for index, participant in enumerate(all_participants):
             if index in mev_params.attach_participants and participant.el_type == constants.EL_TYPE.gwyneth:            
-                plan.print("Starting rbuilder for participant {0}: {1}".format(index, participant.el_type))
+                plan.print("Starting rbuilder for participant {0} el_type {1}".format(index, participant.el_type))
                 beacon_uri = participant.cl_context.beacon_http_url
                 el_rpc_uri = "http://{0}:{1}".format(
                     participant.el_context.ip_addr, participant.el_context.rpc_port_num
@@ -489,7 +489,7 @@ def run(plan, args={}):
             )
             plan.print("Successfully launched blockscout")
         elif additional_service == "blockscout_l2_1":
-            plan.print("Launching blockscout for L2s")
+            plan.print("Launc hing blockscout for L2s")
             blockscout_sc_verif_url = blockscout.launch_blockscout(
                 plan,
                 all_el_contexts,
