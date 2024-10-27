@@ -25,8 +25,8 @@ METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
-L2_DATA_MOUNT = "/data/reth/l2-data"
-IPC_MOUNT = "/tmp/reth.ipc"
+L2_DATA_MOUNT = "/data/reth/gwyneth"
+IPC_MOUNT = "/tmp/ipc"
 
 ENTRYPOINT_ARGS = ["sh", "-c"]
 
@@ -234,7 +234,6 @@ def get_config(
         "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
         "--discovery.port={0}".format(discovery_port),
         "--port={0}".format(discovery_port),
-        "--ipcdisable"
     ]
 
     if network == constants.NETWORK_NAME.kurtosis:
@@ -264,14 +263,12 @@ def get_config(
         # this is a repeated<proto type>, we convert it into Starlark
         cmd.extend([param for param in extra_params])
 
-    cmd_str = " ".join(cmd)
-
     files = {
         constants.GENESIS_DATA_MOUNTPOINT_ON_CLIENTS: el_cl_genesis_data.files_artifact_uuid,
         constants.JWT_MOUNTPOINT_ON_CLIENTS: jwt_file,
     }
 
-    if persistent:
+    if persistent or launcher.gwyneth:
         files[EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER] = Directory(
             persistent_key="data-{0}".format(service_name),
             size=el_volume_size,
@@ -290,7 +287,8 @@ def get_config(
         cmd_chain_ids = ["--l2.chain_ids"]
         cmd_datadirs = ["--l2.datadirs"]
         cmd_ports = ["--l2.ports"]
-        cmd_ipcs = ["--l2.ipcs"]
+        files[IPC_MOUNT] = Directory(persistent_key="ipc-{0}".format(service_name))
+        cmd_ipc = ["--l2.ipc_path={0}".format(IPC_MOUNT)]
         for (i, (l2_network, volume)) in enumerate(zip(launcher.el_l2_networks, launcher.el_l2_volumes)):
             # CHAIN ID
             cmd_chain_ids.append(l2_network)
@@ -309,14 +307,15 @@ def get_config(
             used_port_assignments["{0}-{1}".format(constants.L2_RPC_PORT_ID, l2_network)] = L2_RPC_PORT_BASE + i
             # IPC FILE
             # /tmp/reth.ipc-160010: /static_files/gwyneth/reth.ipc-160010
-            ipc_host_path = "{0}-{1}-{2}".format(static_files.L2_IPC_FILEPATH, service_name, l2_network)
-            ipc_mount_path = "{0}-{1}".format(IPC_MOUNT, l2_network)
-            ipc_artifact = plan.upload_files(src=ipc_host_path, name="reth.ipc-{0}-{1}".format(service_name, l2_network))
-            files[ipc_mount_path] = ipc_artifact
-            cmd_ipcs.append(ipc_mount_path)
-            ipc_artifacts.append(ipc_artifact)
-            
-        cmd_str += " " +  " ".join(cmd_chain_ids) + " " + " ".join(cmd_datadirs) + " " + " ".join(cmd_ports) + " " + " ".join(cmd_ipcs)
+            # ipc_host_path = "{0}-{1}-{2}".format(static_files.L2_IPC_FILEPATH, service_name, l2_network)
+            # ipc_mount_path = "{0}-{1}".format(IPC_MOUNT, l2_network)
+            # ipc_artifact = plan.upload_files(src=ipc_host_path, name="reth.ipc-{0}-{1}".format(service_name, l2_network))
+            # files[ipc_mount_path] = ipc_artifact            
+            # cmd_ipcs.append(ipc_mount_path)
+            # ipc_artifacts.append(ipc_artifact)
+        cmd_ipc_l1 = ["--ipcpath", IPC_MOUNT + "/l1.ipc"]
+        cmd.extend([" ".join(cmd_ipc_l1), " ".join(cmd_chain_ids), " ".join(cmd_datadirs), " ".join(cmd_ports), " ".join(cmd_ipc)])
+        cmd_str = " ".join(cmd)
         plan.print("~~~~~~\n{0}".format(cmd_str))
 
 
