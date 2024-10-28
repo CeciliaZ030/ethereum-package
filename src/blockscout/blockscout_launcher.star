@@ -46,24 +46,24 @@ def launch_blockscout(
     global_node_selectors,
     port_publisher,
     additional_service_index,
-    isL2
+    l2_network=None,
 ):
 
     el_context = el_contexts[0]
-
     el_client_name = el_context.client_name
 
-    real_service_name = SERVICE_NAME_BLOCKSCOUT
-    el_client_rpc_url = "http://{}:{}/".format(
-        el_context.ip_addr, el_context.rpc_port_num
-    )
-    if isL2 == True:
+    if l2_network != None:
+        real_service_name = "{0}-gwyneth-{1}".format(SERVICE_NAME_BLOCKSCOUT, l2_network)
         el_client_rpc_url = "http://{}:{}/".format(
-            el_context.ip_addr, L2_RPC_PORT_NUM
+            el_context.ip_addr, el_context.l2_rpc_ports[l2_network]
         )
-        real_service_name = "{}{}".format(
-            real_service_name, "-layer2"
+    else:
+        real_service_name = SERVICE_NAME_BLOCKSCOUT
+        el_client_rpc_url = "http://{}:{}/".format(
+            el_context.ip_addr, el_context.rpc_port_num
         )
+    plan.print("Launching Blockscout real_service_name: {}".format(real_service_name))
+    
 
     postgres_output = postgres.run(
         plan,

@@ -206,6 +206,7 @@ def run(plan, args={}):
             broadcaster.PORT,
         )
 
+    mev_additional_service_cnt = 0
     mev_endpoints = []
     mev_endpoint_names = []
     # passed external relays get priority
@@ -310,6 +311,7 @@ def run(plan, args={}):
         mev_endpoints.append(endpoint)
         mev_endpoint_names.append(args_with_right_defaults.mev_type)
     elif args_with_right_defaults.mev_type == constants.GWYNETH_MEV_TYPE:
+        # TODO(Cecilia): relays for L2 in the future
         for index, participant in enumerate(all_participants):
             if index in mev_params.attach_participants and participant.el_type == constants.EL_TYPE.gwyneth:            
                 plan.print("Starting rbuilder for participant {0} el_type {1}".format(index, participant.el_type))
@@ -326,7 +328,21 @@ def run(plan, args={}):
                     mev_params,
                     global_node_selectors
                 )
-                # TODO(Cecilia): add relay for L2?
+                # Only launch blockscout on the first participant for each L2s
+                if index == 0:                    
+                    for l2_networks in participant.el_l2_networks:
+                        if l2_networks in mev_params.blockscouts:
+                            plan.print("Starting blockscout for participant {0}".format(index))
+                            blockscout.launch_blockscout(
+                                plan,
+                                [participant.el_context],
+                                persistent,
+                                global_node_selectors,
+                                args_with_right_defaults.port_publisher,
+                                mev_additional_service_cnt,
+                                l2_networks,
+                            )
+                            mev_additional_service_cnt += 1
     # spin up the mev boost contexts if some endpoints for relays have been passed
     all_mevboost_contexts = []
     if mev_endpoints:
@@ -402,9 +418,10 @@ def run(plan, args={}):
         return output
 
     launch_prometheus_grafana = False
-    for index, additional_service in enumerate(
+    for idx, additional_service in enumerate(
         args_with_right_defaults.additional_services
     ):
+        index = idx + mev_additional_service_cnt
         if additional_service == "tx_spammer":
             plan.print("Launching transaction spammer")
             tx_spammer_params = args_with_right_defaults.tx_spammer_params
@@ -485,19 +502,6 @@ def run(plan, args={}):
                 global_node_selectors,
                 args_with_right_defaults.port_publisher,
                 index,
-                False
-            )
-            plan.print("Successfully launched blockscout")
-        elif additional_service == "blockscout_l2_1":
-            plan.print("Launc hing blockscout for L2s")
-            blockscout_sc_verif_url = blockscout.launch_blockscout(
-                plan,
-                all_el_contexts,
-                persistent,
-                global_node_selectors,
-                args_with_right_defaults.port_publisher,
-                index,
-                True
             )
             plan.print("Successfully launched blockscout")
         elif additional_service == "dora":

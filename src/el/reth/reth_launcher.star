@@ -89,7 +89,7 @@ def launch(
 
     cl_client_name = service_name.split("-")[3]
 
-    (config, ipc_artifacts) = get_config(
+    (config, l2_rpc_ports) = get_config(
         plan,
         launcher,
         image,
@@ -138,7 +138,7 @@ def launch(
         ws_url,
         service_name,
         [reth_metrics_info],
-        ipc_artifacts,
+        l2_rpc_ports,
     )
 
 
@@ -280,7 +280,7 @@ def get_config(
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
 
 
-    ipc_artifacts = []
+    l2_rpc_ports = {}
     if launcher.gwyneth:
         if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
             fail("The number of L2 networks and volumes must be the same")
@@ -303,16 +303,10 @@ def get_config(
             # RPC PORT
             # l2-rpc-160010: 10110
             # the ws port is the rpc port + 100
+            l2_rpc_ports[l2_network] = L2_RPC_PORT_BASE + i
             cmd_ports.append(str(L2_RPC_PORT_BASE + i))
             used_port_assignments["{0}-{1}".format(constants.L2_RPC_PORT_ID, l2_network)] = L2_RPC_PORT_BASE + i
-            # IPC FILE
-            # /tmp/reth.ipc-160010: /static_files/gwyneth/reth.ipc-160010
-            # ipc_host_path = "{0}-{1}-{2}".format(static_files.L2_IPC_FILEPATH, service_name, l2_network)
-            # ipc_mount_path = "{0}-{1}".format(IPC_MOUNT, l2_network)
-            # ipc_artifact = plan.upload_files(src=ipc_host_path, name="reth.ipc-{0}-{1}".format(service_name, l2_network))
-            # files[ipc_mount_path] = ipc_artifact            
-            # cmd_ipcs.append(ipc_mount_path)
-            # ipc_artifacts.append(ipc_artifact)
+            
         cmd_ipc_l1 = ["--ipcpath", IPC_MOUNT + "/l1.ipc"]
         cmd.extend([" ".join(cmd_ipc_l1), " ".join(cmd_chain_ids), " ".join(cmd_datadirs), " ".join(cmd_ports), " ".join(cmd_ipc)])
         cmd_str = " ".join(cmd)
@@ -343,7 +337,7 @@ def get_config(
         tolerations=tolerations,
         node_selectors=node_selectors,
     )
-    return (config, ipc_artifacts)
+    return (config, l2_rpc_ports)
 
 
 def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):

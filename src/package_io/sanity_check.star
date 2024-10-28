@@ -189,6 +189,7 @@ SUBCATEGORY_PARAMS = {
         "l1_gwyneth_address",
         "l1_proposer_pk",
         "attach_participants",
+        "blockscouts"
     ],
     "xatu_sentry_params": [
         "xatu_sentry_image",
@@ -215,7 +216,6 @@ ADDITIONAL_SERVICES_PARAMS = [
     "goomy_blob",
     "el_forkmon",
     "blockscout",
-    "blockscout_l2_1",
     "beacon_metrics_gazer",
     "dora",
     "full_beaconchain_explorer",

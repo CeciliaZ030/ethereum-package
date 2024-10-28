@@ -10,7 +10,7 @@ def new_el_context(
     ws_url,
     service_name="",
     el_metrics_info=None,
-    ipc_files=None,
+    l2_rpc_ports=None,
 ):
     return struct(
         service_name=service_name,
@@ -24,5 +24,5 @@ def new_el_context(
         rpc_http_url=rpc_http_url,
         ws_url=ws_url,
         el_metrics_info=el_metrics_info,
-        ipc_files=ipc_files,
+        l2_rpc_ports=l2_rpc_ports,
     )

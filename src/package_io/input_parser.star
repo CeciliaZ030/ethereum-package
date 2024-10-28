@@ -326,6 +326,7 @@ def input_parser(plan, input_args):
             l1_gwyneth_address=result["mev_params"]["l1_gwyneth_address"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
             l1_proposer_pk=result["mev_params"]["l1_proposer_pk"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
             attach_participants=result["mev_params"]["attach_participants"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            blockscouts=result["mev_params"]["blockscouts"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
         )
         if result["mev_params"]
         else None,
@@ -989,6 +990,7 @@ def get_default_mev_params(mev_type, preset):
             "l1_gwyneth_address": constants.DEFAULT_L1_GWYNETH_ADDRESS,
             "l1_proposer_pk": constants.DEFAULT_L1_PROPOSER_PK,
             "attach_participants": [],
+            "blockscouts": [],
         }
 
     return {
@@ -1149,14 +1151,6 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
             participant["vc_extra_params"].append("--enable-builder")
         if participant["cl_type"] == "grandine":
             participant["cl_extra_params"].append("--builder-url={0}".format(mev_url))
-
-        # if (
-        #     mev_type == constants.GWYNETH_MEV_TYPE 
-        #     and participant["el_type"] == constants.EL_TYPE.gwyneth
-        #     and index in mev_params["attach_participants"]
-        # ):
-        #     mev_params["l2_networks"] = participant["el_l2_networks"]
-        #     mev_params["l2_volumes"] = participant["el_l2_volumes"]
 
     num_participants = len(parsed_arguments_dict["participants"])
     index_str = shared_utils.zfill_custom(
