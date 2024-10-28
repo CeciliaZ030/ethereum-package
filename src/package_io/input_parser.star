@@ -81,7 +81,9 @@ ATTR_TO_BE_SKIPPED_AT_ROOT = (
 
 def input_parser(plan, input_args):
     sanity_check.sanity_check(plan, input_args)
+    plan.print(input_args)
     result = parse_network_params(plan, input_args)
+    plan.print(result)
 
     # add default eth2 input params
     result["dora_params"] = get_default_dora_params()
@@ -165,24 +167,33 @@ def input_parser(plan, input_args):
         constants.MOCK_MEV_TYPE,
         constants.FLASHBOTS_MEV_TYPE,
         constants.MEV_RS_MEV_TYPE,
+        constants.GWYNETH_MEV_TYPE,
     ):
         result = enrich_mev_extra_params(
             result,
             MEV_BOOST_SERVICE_NAME_PREFIX,
             MEV_BOOST_PORT,
             result.get("mev_type"),
+            result.get("mev_params"),
         )
     elif result.get("mev_type") == None:
         pass
     else:
         fail(
-            "Unsupported MEV type: {0}, please use 'mock', 'flashbots' or 'mev-rs' type".format(
+            "Unsupported MEV type: {0}, please use 'mock', 'flashbots', 'mev-rs' or 'gwyneth-rbuilder' type".format(
                 result.get("mev_type")
             )
         )
 
     if result["port_publisher"]["nat_exit_ip"] == "auto":
         result["port_publisher"]["nat_exit_ip"] = get_public_ip(plan)
+    
+
+    for participant in result["participants"]:
+        for i in range(len(participant["el_l2_networks"])):
+            if i >= len(participant["el_l2_volumes"]):
+                participant["el_l2_volumes"].append(constants.DEFAULT_L2_VOLUME)
+   
 
     return struct(
         participants=[
@@ -195,6 +206,8 @@ def input_parser(plan, input_args):
                 el_extra_env_vars=participant["el_extra_env_vars"],
                 el_extra_labels=participant["el_extra_labels"],
                 el_tolerations=participant["el_tolerations"],
+                el_l2_networks=participant["el_l2_networks"],
+                el_l2_volumes=participant["el_l2_volumes"],
                 cl_type=participant["cl_type"],
                 cl_image=participant["cl_image"],
                 cl_log_level=participant["cl_log_level"],
@@ -310,6 +323,10 @@ def input_parser(plan, input_args):
             mev_flood_seconds_per_bundle=result["mev_params"][
                 "mev_flood_seconds_per_bundle"
             ],
+            l1_gwyneth_address=result["mev_params"]["l1_gwyneth_address"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            l1_proposer_pk=result["mev_params"]["l1_proposer_pk"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            attach_participants=result["mev_params"]["attach_participants"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            blockscouts=result["mev_params"]["blockscouts"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
         )
         if result["mev_params"]
         else None,
@@ -857,6 +874,8 @@ def default_participant():
         "el_extra_params": [],
         "el_tolerations": [],
         "el_volume_size": 0,
+        "el_l2_networks": [],
+        "el_l2_volumes": [],
         "el_min_cpu": 0,
         "el_max_cpu": 0,
         "el_min_mem": 0,
@@ -950,6 +969,29 @@ def get_default_mev_params(mev_type, preset):
             mev_boost_image = constants.DEFAULT_MEV_RS_IMAGE
         mev_builder_extra_data = "0x68656C6C6F20776F726C640A"  # "hello world\n"
         mev_builder_extra_args = ["--mev-builder-config=" + "/config/config.toml"]
+
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        # Cecilia: none of these are currently used
+        return {
+            "mev_relay_image": None,
+            "mev_builder_image": constants.DEFAULT_GWYNETH_RBUILDER_IMAGE,
+            "mev_builder_cl_image": None,
+            "mev_builder_extra_data": None,
+            "mev_builder_extra_args": [],
+            "mev_boost_image": None,
+            "mev_boost_args": [],
+            "mev_relay_api_extra_args": [],
+            "mev_relay_housekeeper_extra_args": [],
+            "mev_relay_website_extra_args": [],
+            "mev_flood_image": None,
+            "mev_flood_extra_args": [],
+            "mev_flood_seconds_per_bundle": None,
+            "mev_builder_prometheus_config": None,
+            "l1_gwyneth_address": constants.DEFAULT_L1_GWYNETH_ADDRESS,
+            "l1_proposer_pk": constants.DEFAULT_L1_PROPOSER_PK,
+            "attach_participants": [],
+            "blockscouts": [],
+        }
 
     return {
         "mev_relay_image": mev_relay_image,
@@ -1061,7 +1103,7 @@ def enrich_disable_peer_scoring(parsed_arguments_dict):
 
 
 # TODO perhaps clean this up into a map
-def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type):
+def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type, mev_params):
     for index, participant in enumerate(parsed_arguments_dict["participants"]):
         index_str = shared_utils.zfill_custom(
             index + 1, len(str(len(parsed_arguments_dict["participants"])))
@@ -1120,7 +1162,7 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         mev_participant.update(
             {
                 "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
-                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
+                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"], # default is lightouse
                 "cl_log_level": parsed_arguments_dict["global_log_level"],
                 "cl_extra_params": [
                     "--always-prepare-payload",
@@ -1183,6 +1225,23 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
             }
         )
         parsed_arguments_dict["participants"].append(mev_participant)
+
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        for i, participant in enumerate(parsed_arguments_dict["participants"]):
+            if i in mev_params["attach_participants"]:
+                if participant["el_type"] != constants.EL_TYPE.gwyneth or participant["cl_type"] != constants.CL_TYPE.lighthouse:
+                    fail(
+                        "Gwyneth MEV type (rbuilder) requires Gwyneth EL and Lighthouse CL"
+                    )                
+                participant.update(
+                    {
+                        "cl_extra_params": [
+                            "--always-prepare-payload",
+                            "--prepare-payload-lookahead",
+                            "12000",
+                        ],
+                    }
+                )
     return parsed_arguments_dict
 
 

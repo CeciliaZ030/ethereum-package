@@ -8,6 +8,8 @@ PARTICIPANT_CATEGORIES = {
         "el_extra_params",
         "el_tolerations",
         "el_volume_size",
+        "el_l2_networks",
+        "el_l2_volumes",
         "el_min_cpu",
         "el_max_cpu",
         "el_min_mem",
@@ -67,6 +69,8 @@ PARTICIPANT_MATRIX_PARAMS = {
             "el_max_cpu",
             "el_min_mem",
             "el_max_mem",
+            "el_l2_networks",
+            "el_l2_volumes",
         ],
         "cl": [
             "cl_type",
@@ -182,6 +186,10 @@ SUBCATEGORY_PARAMS = {
         "mev_flood_extra_args",
         "mev_flood_seconds_per_bundle",
         "custom_flood_params",
+        "l1_gwyneth_address",
+        "l1_proposer_pk",
+        "attach_participants",
+        "blockscouts"
     ],
     "xatu_sentry_params": [
         "xatu_sentry_image",
@@ -208,7 +216,6 @@ ADDITIONAL_SERVICES_PARAMS = [
     "goomy_blob",
     "el_forkmon",
     "blockscout",
-    "blockscout_l2_1",
     "beacon_metrics_gazer",
     "dora",
     "full_beaconchain_explorer",

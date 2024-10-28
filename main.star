@@ -49,6 +49,7 @@ mev_flood = import_module("./src/mev/flashbots/mev_flood/mev_flood_launcher.star
 mev_custom_flood = import_module(
     "./src/mev/flashbots/mev_custom_flood/mev_custom_flood_launcher.star"
 )
+rbuilder_launcher = import_module("./src/mev/gwyneth/rbuilder_launcher.star")  
 broadcaster = import_module("./src/broadcaster/broadcaster.star")
 assertoor = import_module("./src/assertoor/assertoor_launcher.star")
 get_prefunded_accounts = import_module(
@@ -66,13 +67,13 @@ MEV_BOOST_SHOULD_CHECK_RELAY = True
 PATH_TO_PARSED_BEACON_STATE = "/genesis/output/parsedBeaconState.json"
 
 
+
 def run(plan, args={}):
     """Launches an arbitrarily complex ethereum testnet based on the arguments provided
 
     Args:
         args: A YAML or JSON argument to configure the network; example https://github.com/ethpandaops/ethereum-package/blob/main/network_params.yaml
     """
-
     args_with_right_defaults = input_parser.input_parser(plan, args)
 
     num_participants = len(args_with_right_defaults.participants)
@@ -205,6 +206,7 @@ def run(plan, args={}):
             broadcaster.PORT,
         )
 
+    mev_additional_service_cnt = 0
     mev_endpoints = []
     mev_endpoint_names = []
     # passed external relays get priority
@@ -308,7 +310,39 @@ def run(plan, args={}):
         )
         mev_endpoints.append(endpoint)
         mev_endpoint_names.append(args_with_right_defaults.mev_type)
-
+    elif args_with_right_defaults.mev_type == constants.GWYNETH_MEV_TYPE:
+        # TODO(Cecilia): relays for L2 in the future
+        for index, participant in enumerate(all_participants):
+            if index in mev_params.attach_participants and participant.el_type == constants.EL_TYPE.gwyneth:            
+                plan.print("Starting rbuilder for participant {0} el_type {1}".format(index, participant.el_type))
+                beacon_uri = participant.cl_context.beacon_http_url
+                el_rpc_uri = "http://{0}:{1}".format(
+                    participant.el_context.ip_addr, participant.el_context.rpc_port_num
+                )
+                plan.print("    beacon_uri: {0}".format(beacon_uri))
+                rbuilder_launcher.launch(
+                    plan,
+                    beacon_uri,
+                    participant.el_l2_networks,
+                    participant.el_context,
+                    mev_params,
+                    global_node_selectors
+                )
+                # Only launch blockscout on the first participant for each L2s
+                if index == 0:                    
+                    for l2_networks in participant.el_l2_networks:
+                        if l2_networks in mev_params.blockscouts:
+                            plan.print("Starting blockscout for participant {0}".format(index))
+                            blockscout.launch_blockscout(
+                                plan,
+                                [participant.el_context],
+                                persistent,
+                                global_node_selectors,
+                                args_with_right_defaults.port_publisher,
+                                mev_additional_service_cnt,
+                                l2_networks,
+                            )
+                            mev_additional_service_cnt += 1
     # spin up the mev boost contexts if some endpoints for relays have been passed
     all_mevboost_contexts = []
     if mev_endpoints:
@@ -384,9 +418,10 @@ def run(plan, args={}):
         return output
 
     launch_prometheus_grafana = False
-    for index, additional_service in enumerate(
+    for idx, additional_service in enumerate(
         args_with_right_defaults.additional_services
     ):
+        index = idx + mev_additional_service_cnt
         if additional_service == "tx_spammer":
             plan.print("Launching transaction spammer")
             tx_spammer_params = args_with_right_defaults.tx_spammer_params
@@ -467,19 +502,6 @@ def run(plan, args={}):
                 global_node_selectors,
                 args_with_right_defaults.port_publisher,
                 index,
-                False
-            )
-            plan.print("Successfully launched blockscout")
-        elif additional_service == "blockscout_l2_1":
-            plan.print("Launching blockscout for L2s")
-            blockscout_sc_verif_url = blockscout.launch_blockscout(
-                plan,
-                all_el_contexts,
-                persistent,
-                global_node_selectors,
-                args_with_right_defaults.port_publisher,
-                index,
-                True
             )
             plan.print("Successfully launched blockscout")
         elif additional_service == "dora":

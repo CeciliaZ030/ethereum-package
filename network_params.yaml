@@ -1,15 +1,15 @@
 participants:
   - el_type: reth
-    el_image: taiko_reth
+    el_image: taiko_reth2
     cl_type: lighthouse
     cl_image: sigp/lighthouse:latest
     cl_extra_params: [--always-prepare-payload, --prepare-payload-lookahead, "12000"]
   - el_type: reth
-    el_image: taiko_reth
+    el_image: taiko_reth2
     cl_type: teku
     cl_image: consensys/teku:latest
 network_params:
-  network_id: '160010'
+  network_id: '160010' # can be any number other than 1
 additional_services:
   - blockscout
   - blockscout_l2_1
@@ -18,3 +18,6 @@ port_publisher:
   el:
     enabled: true
     public_port_start: 32000
+  additional_services:
+    enabled: true
+    public_port_start: 64000

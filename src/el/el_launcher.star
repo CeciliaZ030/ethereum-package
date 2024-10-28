@@ -105,6 +105,16 @@ def launch(
             ),
             "launch_method": nimbus_eth1.launch,
         },
+
+        # constants.EL_TYPE.gwyneth: {
+        #     "launcher": reth.new_gwyneth_launcher(
+        #         el_cl_data,
+        #         jwt_file,
+        #         network_params.network,
+        #         l2_chain_id=network_id,
+        #     ),
+        #     "launch_method": reth.launch,
+        # },
     }
 
     all_el_contexts = []
@@ -119,17 +129,29 @@ def launch(
         tolerations = input_parser.get_client_tolerations(
             participant.el_tolerations, participant.tolerations, global_tolerations
         )
-        if el_type not in el_launchers:
-            fail(
-                "Unsupported launcher '{0}', need one of '{1}'".format(
-                    el_type, ",".join(el_launchers.keys())
-                )
+        if el_type == constants.EL_TYPE.gwyneth:
+            el_launcher, launch_method = (
+                reth.new_gwyneth_launcher(
+                    el_cl_data,
+                    jwt_file,
+                    network_params.network,
+                    participant.el_l2_networks,
+                    participant.el_l2_volumes
+                ),
+                reth.launch
             )
+        else:
+            if el_type not in el_launchers:
+                fail(
+                    "Unsupported launcher '{0}', need one of '{1}'".format(
+                        el_type, ",".join(el_launchers.keys())
+                    )
+                )
 
-        el_launcher, launch_method = (
-            el_launchers[el_type]["launcher"],
-            el_launchers[el_type]["launch_method"],
-        )
+            el_launcher, launch_method = (
+                el_launchers[el_type]["launcher"],
+                el_launchers[el_type]["launch_method"],
+            )
 
         # Zero-pad the index using the calculated zfill value
         index_str = shared_utils.zfill_custom(index + 1, len(str(len(participants))))

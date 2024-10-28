@@ -1,0 +1,30 @@
+participants:
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['160010', '160011']
+    el_l2_volumes: [3000, 3000] # 3GB
+    cl_type: lighthouse
+    cl_image: sigp/lighthouse:latest
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['160010', '160011']
+    cl_type: teku
+    cl_image: consensys/teku:latest
+additional_services:
+  - blockscout
+port_publisher:
+  nat_exit_ip: KURTOSIS_IP_ADDR_PLACEHOLDER
+  el:
+    enabled: true
+    public_port_start: 32000
+  additional_services:
+    enabled: true
+    public_port_start: 64000
+
+mev_type: gwyneth-rbuilder
+mev_params:
+  mev_builder_image: gwyneth-rbuilder
+  l1_gwyneth_address: "0x9fCF7D13d10dEdF17d0f24C62f0cf4ED462f65b7"
+  l1_proposer_pk: "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d"
+  attach_participants: [0]
+  blockscouts: ['160010', '160011']

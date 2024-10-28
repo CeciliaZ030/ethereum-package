@@ -7,7 +7,7 @@ NOT_PROVIDED_APPLICATION_PROTOCOL = ""
 NOT_PROVIDED_WAIT = "not-provided-wait"
 
 MAX_PORTS_PER_CL_NODE = 5
-MAX_PORTS_PER_EL_NODE = 6
+MAX_PORTS_PER_EL_NODE = 7
 MAX_PORTS_PER_VC_NODE = 3
 MAX_PORTS_PER_ADDITIONAL_SERVICE = 2
 
@@ -107,6 +107,8 @@ with open("/network-configs/enodes.txt") as bootnode_file:
 print(",".join(bootnodes), end="")
             """,
     )
+    plan.print("~~~~~~~~~~")
+    plan.print(filename)
     return enode_list.output
 
 
@@ -279,13 +281,15 @@ def __get_port_range(port_start, max_ports_per_component, participant_index):
     return (public_port_start, public_port_end)
 
 
+def is_l2_port_id(port_id):
+    return port_id.startswith(constants.L2_RPC_PORT_ID)
+
 def get_port_specs(port_assignments):
     ports = {}
     for port_id, port in port_assignments.items():
         if port_id in [
             constants.TCP_DISCOVERY_PORT_ID,
             constants.RPC_PORT_ID,
-            constants.L2_RPC_PORT_ID,
             constants.ENGINE_RPC_PORT_ID,
             constants.ENGINE_WS_PORT_ID,
             constants.WS_RPC_PORT_ID,
@@ -293,6 +297,8 @@ def get_port_specs(port_assignments):
             constants.WS_PORT_ID,
             constants.PROFILING_PORT_ID,
         ]:
+            ports.update({port_id: new_port_spec(port, TCP_PROTOCOL)})
+        elif is_l2_port_id(port_id):
             ports.update({port_id: new_port_spec(port, TCP_PROTOCOL)})
         elif port_id == constants.UDP_DISCOVERY_PORT_ID:
             ports.update({port_id: new_port_spec(port, UDP_PROTOCOL)})

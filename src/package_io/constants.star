@@ -8,6 +8,7 @@ EL_TYPE = struct(
     reth_builder="reth-builder",
     ethereumjs="ethereumjs",
     nimbus="nimbus",
+    gwyneth="gwyneth",
 )
 
 CL_TYPE = struct(
@@ -81,6 +82,12 @@ KEYMANAGER_MOUNT_PATH_ON_CONTAINER = (
 MOCK_MEV_TYPE = "mock"
 FLASHBOTS_MEV_TYPE = "flashbots"
 MEV_RS_MEV_TYPE = "mev-rs"
+GWYNETH_MEV_TYPE = "gwyneth-rbuilder"
+
+DEFAULT_L2_VOLUME = 3000 # 3GB
+DEFAULT_GWYNETH_RBUILDER_IMAGE = "gwyneth-rbuilder"
+DEFAULT_L1_GWYNETH_ADDRESS = "0x9fCF7D13d10dEdF17d0f24C62f0cf4ED462f65b7"
+DEFAULT_L1_PROPOSER_PK = "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d"
 
 DEFAULT_SNOOPER_IMAGE = "ethpandaops/rpc-snooper:latest"
 DEFAULT_FLASHBOTS_RELAY_IMAGE = "flashbots/mev-boost-relay:0.27"

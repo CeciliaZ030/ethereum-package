@@ -412,6 +412,7 @@ def launch_participant_network(
             el_context,
             cl_context,
             vc_context,
+            participant.el_l2_networks,
             snooper_engine_context,
             snooper_beacon_context,
             ethereum_metrics_exporter_context,
