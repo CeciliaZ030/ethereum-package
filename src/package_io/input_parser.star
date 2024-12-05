@@ -75,6 +75,7 @@ ATTR_TO_BE_SKIPPED_AT_ROOT = (
     "network_params",
     "participants",
     "mev_params",
+    "gwyneth_params",
     "blockscout_params",
     "dora_params",
     "docker_cache_params",
@@ -93,11 +94,15 @@ def input_parser(plan, input_args):
     sanity_check.sanity_check(plan, input_args)
     result = parse_network_params(plan, input_args)
     # add default eth2 input params
+    result["gwyneth_params"] = get_default_gwyneth_params()
     result["blockscout_params"] = get_default_blockscout_params()
     result["dora_params"] = get_default_dora_params()
     result["docker_cache_params"] = get_default_docker_cache_params()
+    # Cecilia: sets default EL images = gwyneth in-process reth-rbuilder
+    # CL image = lighthouse
+    # mev_builder_extra_data = GwynethParams
     result["mev_params"] = get_default_mev_params(
-        result.get("mev_type"), result["network_params"]["preset"]
+        result.get("mev_type"), result["network_params"]["preset"], input_args
     )
     if (
         result["network_params"]["network"] == constants.NETWORK_NAME.kurtosis
@@ -138,6 +143,10 @@ def input_parser(plan, input_args):
         if attr not in ATTR_TO_BE_SKIPPED_AT_ROOT and attr in input_args:
             result[attr] = value
         # custom eth2 attributes config
+        elif attr == "gwyneth_params":
+            for sub_attr in input_args["gwyneth_params"]:
+                sub_value = input_args["gwyneth_params"][sub_attr]
+                result["gwyneth_params"][sub_attr] = sub_value
         elif attr == "blockscout_params":
             for sub_attr in input_args["blockscout_params"]:
                 sub_value = input_args["blockscout_params"][sub_attr]
@@ -193,6 +202,7 @@ def input_parser(plan, input_args):
         constants.FLASHBOTS_MEV_TYPE,
         constants.MEV_RS_MEV_TYPE,
         constants.COMMIT_BOOST_MEV_TYPE,
+        constants.GWYNETH_MEV_TYPE,
     ):
         result = enrich_mev_extra_params(
             result,
@@ -200,6 +210,8 @@ def input_parser(plan, input_args):
             MEV_BOOST_PORT,
             result.get("mev_type"),
         )
+        # Cecilia: Add a EL participant where it starts builder in the same container
+        plan.print("=> enrich_mev_extra_params: {0}".format(result["participants"][-1]))
     elif result.get("mev_type") == None:
         pass
     else:
@@ -224,6 +236,7 @@ def input_parser(plan, input_args):
                 el_image=participant["el_image"],
                 el_log_level=participant["el_log_level"],
                 el_volume_size=participant["el_volume_size"],
+                el_l2_networks=participant["el_l2_networks"],
                 el_extra_params=participant["el_extra_params"],
                 el_extra_env_vars=participant["el_extra_env_vars"],
                 el_extra_labels=participant["el_extra_labels"],
@@ -950,6 +963,7 @@ def default_participant():
         "el_extra_params": [],
         "el_tolerations": [],
         "el_volume_size": 0,
+        "el_l2_networks": None,
         "el_min_cpu": 0,
         "el_max_cpu": 0,
         "el_min_mem": 0,
@@ -1008,6 +1022,13 @@ def default_participant():
         "keymanager_enabled": None,
     }
 
+def get_default_gwyneth_params():
+    return {
+        "rollup_contract": "0x9fCF7D13d10dEdF17d0f24C62f0cf4ED462f65b7",
+        "proposer_key": "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d",
+        "l2_networks": [],
+        "blockscout": False,
+    }
 
 def get_default_blockscout_params():
     return {
@@ -1033,7 +1054,7 @@ def get_default_docker_cache_params():
     }
 
 
-def get_default_mev_params(mev_type, preset):
+def get_default_mev_params(mev_type, preset, input_args):
     mev_relay_image = constants.DEFAULT_FLASHBOTS_RELAY_IMAGE
     mev_builder_image = constants.DEFAULT_FLASHBOTS_BUILDER_IMAGE
     if preset == "minimal":
@@ -1085,6 +1106,25 @@ def get_default_mev_params(mev_type, preset):
         mev_builder_extra_data = (
             "0x436f6d6d69742d426f6f737420f09f93bb"  # Commit-Boost 📻
         )
+
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        # TODO: l2 relay + mev-boost
+        return {
+            "mev_relay_image": "",
+            "mev_builder_image": constants.DEFAULT_GWYNETH_BUILDER_IMAGE,
+            "mev_builder_cl_image": DEFAULT_CL_IMAGES[constants.CL_TYPE.lighthouse],
+            "mev_builder_extra_data": input_args["gwyneth_params"],
+            "mev_builder_extra_args": [],
+            "mev_boost_image": "",
+            "mev_boost_args": [],
+            "mev_relay_api_extra_args": [],
+            "mev_relay_housekeeper_extra_args": [],
+            "mev_relay_website_extra_args": [],
+            "mev_flood_image": "",
+            "mev_flood_extra_args": [],
+            "mev_flood_seconds_per_bundle": 0,
+            "mev_builder_prometheus_config": mev_builder_prometheus_config,
+        }
 
     return {
         "mev_relay_image": mev_relay_image,
@@ -1280,6 +1320,36 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         mev_participant["el_type"] = "reth-builder"
         mev_participant.update(
             {
+                "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
+                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
+                "cl_log_level": parsed_arguments_dict["global_log_level"],
+                "cl_extra_params": [
+                    "--always-prepare-payload",
+                    "--prepare-payload-lookahead",
+                    "12000",
+                    "--disable-peer-scoring",
+                ],
+                "el_extra_params": parsed_arguments_dict["mev_params"][
+                    "mev_builder_extra_args"
+                ],
+                "validator_count": 0,
+                "prometheus_config": parsed_arguments_dict["mev_params"][
+                    "mev_builder_prometheus_config"
+                ],
+            }
+        )
+
+        parsed_arguments_dict["participants"].append(mev_participant)
+
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        mev_participant = default_participant()
+        mev_participant["el_type"] = "gwyneth-builder"
+        mev_participant["el_l2_networks"] = parsed_arguments_dict["gwyneth_params"]["l2_networks"]
+        mev_participant.update(
+            {
+                # Cecilia: FLASHBOTS_MEV_TYPE contains reth + builder binary
+                # https://github.com/ethpandaops/rbuilder/blob/develop/entrypoint.sh
+                # GWYNETH_MEV_TYPE starts a in-process reth-rbuilder
                 "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
                 "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
                 "cl_log_level": parsed_arguments_dict["global_log_level"],

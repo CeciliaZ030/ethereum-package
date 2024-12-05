@@ -145,6 +145,19 @@ def run(plan, args={}):
             enumerate(args_with_right_defaults.participants),
             global_node_selectors,
         )
+    elif args_with_right_defaults.mev_type == constants.GWYNETH_MEV_TYPE:
+        plan.print("Generating gwyneth builder config file")
+        flashbots_builder_config_file = flashbots_mev_rbuilder.new_builder_config(
+            plan,
+            constants.FLASHBOTS_MEV_TYPE,
+            network_params,
+            constants.VALIDATING_REWARDS_ACCOUNT,
+            network_params.preregistered_validator_keys_mnemonic,
+            args_with_right_defaults.mev_params.mev_builder_extra_data,
+            enumerate(args_with_right_defaults.participants),
+            global_node_selectors,
+            True,
+        )
 
     plan.print(
         "Launching participant network with {0} participants and the following network params {1}".format(

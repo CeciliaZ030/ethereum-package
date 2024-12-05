@@ -20,22 +20,35 @@ def new_builder_config(
     network_params,
     fee_recipient,
     mnemonic,
-    extra_data,
+    extra_data, # gwyneth_params
     participants,
     global_node_selectors,
+    gwyneth=False,
 ):
     num_of_participants = shared_utils.zfill_custom(
         len(participants), len(str(len(participants)))
     )
-    builder_template_data = new_builder_config_template_data(
-        network_params,
-        constants.DEFAULT_MEV_PUBKEY,
-        constants.DEFAULT_MEV_SECRET_KEY[2:],  # drop the 0x prefix
-        mnemonic,
-        fee_recipient,
-        extra_data,
-        num_of_participants,
-    )
+    if gwyneth:
+        builder_template_data = new_gwyneth_builder_config_template_data(
+            network_params,
+            constants.DEFAULT_MEV_PUBKEY,
+            constants.DEFAULT_MEV_SECRET_KEY[2:],  # drop the 0x prefix
+            mnemonic,
+            fee_recipient,
+            extra_data,
+            num_of_participants,
+        )
+        plan.print("Gwyneth rbuilder config {0}".format(extra_data))
+    else:
+        builder_template_data = new_builder_config_template_data(
+            network_params,
+            constants.DEFAULT_MEV_PUBKEY,
+            constants.DEFAULT_MEV_SECRET_KEY[2:],  # drop the 0x prefix
+            mnemonic,
+            fee_recipient,
+            extra_data,
+            num_of_participants,
+        )
     flashbots_builder_config_template = read_file(
         static_files.FLASHBOTS_RBUILDER_CONFIG_FILEPATH
     )
@@ -88,4 +101,37 @@ def new_builder_config_template_data(
         "Mnemonic": mnemonic,
         "FeeRecipient": fee_recipient,
         "ExtraData": extra_data,
+    }
+
+
+def new_gwyneth_builder_config_template_data(
+    network_params,
+    pubkey,
+    secret,
+    mnemonic,
+    fee_recipient,
+    extra_data,
+    num_of_participants,
+):
+    return {
+        "Network": network_params.network
+        if network_params.network in constants.PUBLIC_NETWORKS
+        else "/network-configs/genesis.json",
+        "DataDir": "/data/reth/execution-data",
+        "CLEndpoint": "http://cl-{0}-{1}-{2}:{3}".format(
+            num_of_participants,
+            constants.CL_TYPE.lighthouse,
+            constants.EL_TYPE.gwyneth,
+            lighthouse.BEACON_HTTP_PORT_NUM,
+        ),
+        "GenesisForkVersion": constants.GENESIS_FORK_VERSION,
+        "Relay": "mev-relay-api",
+        "RelayPort": flashbots_relay.MEV_RELAY_ENDPOINT_PORT,
+        "PublicKey": pubkey,
+        "SecretKey": secret,
+        "Mnemonic": mnemonic,
+        "FeeRecipient": fee_recipient,
+        "ExtraData": "🌸🤖",
+        "L1Proposer": extra_data["proposer_key"],
+        "RollupContract": extra_data["rollup_contract"],
     }

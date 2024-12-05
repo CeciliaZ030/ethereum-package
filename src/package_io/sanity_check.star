@@ -8,6 +8,7 @@ PARTICIPANT_CATEGORIES = {
         "el_extra_params",
         "el_tolerations",
         "el_volume_size",
+        "el_l2_networks",
         "el_min_cpu",
         "el_max_cpu",
         "el_min_mem",
@@ -75,6 +76,7 @@ PARTICIPANT_MATRIX_PARAMS = {
             "el_extra_params",
             "el_tolerations",
             "el_volume_size",
+            "el_l2_networks",
             "el_min_cpu",
             "el_max_cpu",
             "el_min_mem",
@@ -235,6 +237,12 @@ SUBCATEGORY_PARAMS = {
         "mev_flood_extra_args",
         "mev_flood_seconds_per_bundle",
         "custom_flood_params",
+    ],
+    "gwyneth_params": [
+        "rollup_contract",
+        "proposer_key",
+        "l2_networks",
+        "blockscout"
     ],
     "xatu_sentry_params": [
         "xatu_sentry_image",

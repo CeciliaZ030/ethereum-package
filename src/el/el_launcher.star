@@ -7,6 +7,7 @@ besu = import_module("./besu/besu_launcher.star")
 erigon = import_module("./erigon/erigon_launcher.star")
 nethermind = import_module("./nethermind/nethermind_launcher.star")
 reth = import_module("./reth/reth_launcher.star")
+gwyneth = import_module("./reth/gwyneth_launcher.star")
 ethereumjs = import_module("./ethereumjs/ethereumjs_launcher.star")
 nimbus_eth1 = import_module("./nimbus-eth1/nimbus_launcher.star")
 
@@ -26,6 +27,7 @@ def launch(
     port_publisher,
     mev_builder_type,
 ):
+    empty_l2_networks = list() # Add per participant if exists
     el_launchers = {
         constants.EL_TYPE.geth: {
             "launcher": geth.new_geth_launcher(
@@ -111,17 +113,34 @@ def launch(
             participant.el_tolerations, participant.tolerations, global_tolerations
         )
 
-        if el_type not in el_launchers:
-            fail(
-                "Unsupported launcher '{0}', need one of '{1}'".format(
-                    el_type, ",".join(el_launchers.keys())
-                )
+        if el_type == constants.EL_TYPE.gwyneth:
+            el_launcher = gwyneth.new_gwyneth_launcher(
+                el_cl_data,
+                jwt_file,
+                network_params.network,
+                participant.el_l2_networks,
             )
-
-        el_launcher, launch_method = (
-            el_launchers[el_type]["launcher"],
-            el_launchers[el_type]["launch_method"],
-        )
+            launch_method = reth.launch
+        elif el_type == constants.EL_TYPE.gwyneth_builder:
+            el_launcher = gwyneth.new_gwyneth_launcher(
+                el_cl_data,
+                jwt_file,
+                network_params.network,
+                participant.el_l2_networks,
+                builder_type=mev_builder_type,
+            )
+            launch_method = reth.launch
+        else:    
+            if el_type not in el_launchers:
+                fail(
+                    "Unsupported launcher '{0}', need one of '{1}'".format(
+                        el_type, ",".join(el_launchers.keys())
+                    )
+                )
+            el_launcher, launch_method = (
+                el_launchers[el_type]["launcher"],
+                el_launchers[el_type]["launch_method"],
+            )
 
         # Zero-pad the index using the calculated zfill value
         index_str = shared_utils.zfill_custom(index + 1, len(str(len(participants))))

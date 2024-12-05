@@ -5,6 +5,8 @@ EL_TYPE = struct(
     besu="besu",
     reth="reth",
     reth_builder="reth-builder",
+    gwyneth ="gwyneth",
+    gwyneth_builder ="gwyneth-builder",
     ethereumjs="ethereumjs",
     nimbus="nimbus",
 )
@@ -85,6 +87,7 @@ MOCK_MEV_TYPE = "mock"
 FLASHBOTS_MEV_TYPE = "flashbots"
 MEV_RS_MEV_TYPE = "mev-rs"
 COMMIT_BOOST_MEV_TYPE = "commit-boost"
+GWYNETH_MEV_TYPE = "gwyneth"
 
 DEFAULT_SNOOPER_IMAGE = "ethpandaops/rpc-snooper:latest"
 DEFAULT_FLASHBOTS_RELAY_IMAGE = "flashbots/mev-boost-relay:0.29.2a3"
@@ -97,6 +100,7 @@ DEFAULT_MEV_PUBKEY = "0xa55c1285d84ba83a5ad26420cd5ad3091e49c55a813eee651cd467db
 DEFAULT_MEV_SECRET_KEY = (
     "0x607a11b45a7219cc61a3d9c5fd08c7eebd602a6a19a977f8d3771d5711a550f2"
 )
+DEFAULT_GWYNETH_BUILDER_IMAGE = "gwyneth-rbuilder"
 
 DEFAULT_MNEMONIC = "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete"
 
