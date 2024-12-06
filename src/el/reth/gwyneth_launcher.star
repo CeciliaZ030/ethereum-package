@@ -146,38 +146,9 @@ def get_config(
     used_ports = shared_utils.get_port_specs(used_port_assignments)
 
     cmd = [
-        "reth",
         "node",
-        "-{0}".format(log_level),
-        "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
-        "--chain={0}".format(
-            launcher.network
-            if launcher.network in constants.PUBLIC_NETWORKS
-            else constants.GENESIS_CONFIG_MOUNT_PATH_ON_CONTAINER + "/genesis.json"
-        ),
-        "--http",
-        "--http.port={0}".format(RPC_PORT_NUM),
-        "--http.addr=0.0.0.0",
-        "--http.corsdomain=*",
-        # WARNING: The admin info endpoint is enabled so that we can easily get ENR/enode, which means
-        #  that users should NOT store private information in these Kurtosis nodes!
-        "--http.api=admin,net,eth,web3,debug,txpool,trace{0}".format(
-            ",flashbots" if launcher.builder_type == "flashbots" else ""
-        ),
-        "--ws",
-        "--ws.addr=0.0.0.0",
-        "--ws.port={0}".format(WS_PORT_NUM),
-        "--ws.api=net,eth",
-        "--ws.origins=*",
-        "--nat=extip:" + port_publisher.nat_exit_ip,
-        "--authrpc.port={0}".format(ENGINE_RPC_PORT_NUM),
-        "--authrpc.jwtsecret=" + constants.JWT_MOUNT_PATH_ON_CONTAINER,
-        "--authrpc.addr=0.0.0.0",
-        "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
-        "--discovery.port={0}".format(discovery_port),
-        "--port={0}".format(discovery_port),
         "--l2.chain_ids={0}".format(",".join(launcher.el_l2_networks)),
-        "--l2.datradirs={0}".format(
+        "--l2.datadirs={0}".format(
             ",".join(
                 [
                     "{0}-{1}".format(EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER, network)
@@ -201,6 +172,33 @@ def get_config(
                 ]
             )
         ),
+        "-{0}".format(log_level),
+        "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
+        "--chain={0}".format(
+            launcher.network
+            if launcher.network in constants.PUBLIC_NETWORKS
+            else constants.GENESIS_CONFIG_MOUNT_PATH_ON_CONTAINER + "/genesis.json"
+        ),
+        "--http",
+        "--http.port={0}".format(RPC_PORT_NUM),
+        "--http.addr=0.0.0.0",
+        "--http.corsdomain=*",
+        # WARNING: The admin info endpoint is enabled so that we can easily get ENR/enode, which means
+        #  that users should NOT store private information in these Kurtosis nodes!
+        "--http.api=admin,net,eth,web3,debug,txpool,trace{0}".format(
+            ",flashbots" if launcher.builder_type == "flashbots" else ""
+        ),
+        "--ws",
+        "--ws.addr=0.0.0.0",
+        "--ws.port={0}".format(WS_PORT_NUM),
+        "--ws.api=net,eth",
+        "--nat=extip:" + port_publisher.nat_exit_ip,
+        "--authrpc.port={0}".format(ENGINE_RPC_PORT_NUM),
+        "--authrpc.jwtsecret=" + constants.JWT_MOUNT_PATH_ON_CONTAINER,
+        "--authrpc.addr=0.0.0.0",
+        "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
+        "--discovery.port={0}".format(discovery_port),
+        "--port={0}".format(discovery_port),
     ]
 
     if launcher.network == constants.NETWORK_NAME.kurtosis:
@@ -243,30 +241,29 @@ def get_config(
                 constants.EL_TYPE.reth + "_volume_size"
             ],
         )
-    cmd_str = " ".join(cmd)
     env_vars = {
-        "RETH_CMD": cmd_str,
+        "RETH_CMD": ' '.join(cmd),
     }
-    entrypoint_args = ["sh", "-c"]
     env_vars = env_vars | participant.el_extra_env_vars
     image = participant.el_image
-    rbuilder_cmd = []
+
     if launcher.builder_type == "gwyneth-rbuilder":
         cl_client_name = service_name.split("-")[4]
         cmd.append("--rbuilder.config={0}".format(flashbots_rbuilder.MEV_FILE_PATH_ON_CONTAINER))
-        cmd_str = " ".join(cmd)
-        plan.print("Gwyneth reth-rbuilder cmd {0}".format(cmd_str))
+        plan.print("Gwyneth reth-rbuilder cmd {0}".format(cmd))
         files[
             flashbots_rbuilder.MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE
         ] = flashbots_rbuilder.MEV_BUILDER_FILES_ARTIFACT_NAME
+
+    plan.print("Gwyneth reth cmd {0}".format(cmd))
 
     config_args = {
         "image": image,
         "ports": used_ports,
         "public_ports": public_ports,
-        "cmd": [cmd_str],
+        "cmd": cmd,
+        # "cmd": ["node --l2.chain_ids=160010 --l2.datadirs=/data/reth/execution-data-160010 --l2.ports=8646 --l2.ipcs=/data/reth/gwyneth.ipc-160010"],
         "files": files,
-        "entrypoint": entrypoint_args,
         "private_ip_address_placeholder": constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
         "env_vars": env_vars,
         "labels": shared_utils.label_maker(

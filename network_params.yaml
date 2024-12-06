@@ -4,7 +4,7 @@ participants:
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['160010']
-    cl_type: lighthouse
+    cl_type: teku
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['160010', '160011'] 

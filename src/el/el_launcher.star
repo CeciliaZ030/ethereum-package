@@ -120,7 +120,7 @@ def launch(
                 network_params.network,
                 participant.el_l2_networks,
             )
-            launch_method = reth.launch
+            launch_method = gwyneth.launch
         elif el_type == constants.EL_TYPE.gwyneth_builder:
             el_launcher = gwyneth.new_gwyneth_launcher(
                 el_cl_data,
@@ -129,7 +129,7 @@ def launch(
                 participant.el_l2_networks,
                 builder_type=mev_builder_type,
             )
-            launch_method = reth.launch
+            launch_method = gwyneth.launch
         else:    
             if el_type not in el_launchers:
                 fail(
