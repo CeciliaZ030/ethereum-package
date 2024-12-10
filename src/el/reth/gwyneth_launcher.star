@@ -135,43 +135,43 @@ def get_config(
         constants.WS_PORT_ID: WS_PORT_NUM,
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
+    auth_ports, ports, ipcs = get_default_l2_ports(launcher.el_l2_networks)
+    for index, _ in enumerate(launcher.el_l2_networks):
+        used_port_assignments[
+            "{0}-{1}".format(constants.ENGINE_RPC_PORT_ID, index)
+        ] = auth_ports[index]
+        used_port_assignments[
+            "{0}-{1}".format(constants.RPC_PORT_ID, index)
+        ] = ports[index]
+    plan.print("Gwyneth reth used_port_assignments \n{0}\n{1}".format(
+        used_port_assignments, get_default_l2_ports(launcher.el_l2_networks)
+    ))
 
     if launcher.builder_type == "gwyneth-rbuilder":
         used_port_assignments[constants.RBUILDER_PORT_ID] = RBUILDER_PORT_NUM
-        for index, network in enumerate(launcher.el_l2_networks):
+        for index, _ in enumerate(launcher.el_l2_networks):
             used_port_assignments[
-                "{0}-{1}".format(constants.RBUILDER_PORT_ID, network)
+                "{0}-{1}".format(constants.RBUILDER_PORT_ID, index)
             ] = RBUILDER_PORT_NUM + index + 1
 
     used_ports = shared_utils.get_port_specs(used_port_assignments)
 
     cmd = [
         "node",
-        "--l2.chain_ids={0}".format(",".join(launcher.el_l2_networks)),
-        "--l2.datadirs={0}".format(
-            ",".join(
-                [
-                    "{0}-{1}".format(EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER, network)
-                    for network in launcher.el_l2_networks
-                ]
-            )
-        ),
-        "--l2.ports={0}".format(
-            ",".join(
-                [
-                    str(RBUILDER_PORT_NUM + index + 1)
-                    for index, _ in enumerate(launcher.el_l2_networks)
-                ]
-            )
-        ),
-        "--l2.ipcs={0}".format(
-            ",".join(
-                [
-                    "{0}-{1}".format(IPC_PATH_ON_CLIENT_CONTAINER,network)
-                    for network in launcher.el_l2_networks
-                ]
-            )
-        ),
+        "--l2.chain_ids",
+        [str(networks) for networks in launcher.el_l2_networks],
+        "--l2.datadirs",
+        [
+            "{0}-{1}".format(EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER, network)
+            for network in launcher.el_l2_networks
+        ],
+        "--l2.ports",
+        [str(port) for port in ports],
+        "--l2.auth_ports",
+        [str(port) for port in auth_ports],
+        "--l2.ipcs",
+        [str(ipc) for ipc in ipcs],
+        "--engine.experimental",
         "-{0}".format(log_level),
         "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
         "--chain={0}".format(
@@ -200,6 +200,8 @@ def get_config(
         "--discovery.port={0}".format(discovery_port),
         "--port={0}".format(discovery_port),
     ]
+
+    cmd = [c for cl in cmd for c in (cl if type(cl) == "list" else [cl])]
 
     if launcher.network == constants.NETWORK_NAME.kurtosis:
         if len(existing_el_clients) > 0:
@@ -241,8 +243,11 @@ def get_config(
                 constants.EL_TYPE.reth + "_volume_size"
             ],
         )
+        
     env_vars = {
         "RETH_CMD": ' '.join(cmd),
+        "RUST_BACKTRACE": 'full',
+        "RUST_LOG": 'debug',
     }
     env_vars = env_vars | participant.el_extra_env_vars
     image = participant.el_image
@@ -262,7 +267,6 @@ def get_config(
         "ports": used_ports,
         "public_ports": public_ports,
         "cmd": cmd,
-        # "cmd": ["node --l2.chain_ids=160010 --l2.datadirs=/data/reth/execution-data-160010 --l2.ports=8646 --l2.ipcs=/data/reth/gwyneth.ipc-160010"],
         "files": files,
         "private_ip_address_placeholder": constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
         "env_vars": env_vars,
@@ -297,3 +301,15 @@ def new_gwyneth_launcher(el_cl_genesis_data, jwt_file, network, el_l2_networks, 
         builder_type=builder_type,
         el_l2_networks=el_l2_networks,
     )
+
+
+# Same as gwyneth-mono/reth/crates/node/core/src/args/rpc_server.rs L215
+#   adjust_instance_ports(&mut self, instance: u16)
+def get_default_l2_ports(l2_networks):
+    # auth port is scaled by a factor of instance * 100
+    auth_ports = [ENGINE_RPC_PORT_NUM + (index + 1) * 100 for index, _ in enumerate(l2_networks)]
+    # http port is scaled by a factor of -instance
+    ports = [RPC_PORT_NUM - (index + 1) for index, _ in enumerate(l2_networks)]
+    # ws port is scaled by a factor of instance * 2
+    ipcs = ["{0}-{1}".format(IPC_PATH_ON_CLIENT_CONTAINER, (index + 1)) for index, _ in enumerate(l2_networks)]
+    return auth_ports, ports, ipcs
