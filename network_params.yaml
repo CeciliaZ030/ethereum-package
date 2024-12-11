@@ -10,7 +10,7 @@ participants:
     el_l2_networks: ['160010', '160011'] 
     cl_type: nimbus
 network_params:
-  preset: minimal
+  network: "holesky" # kurtosis sets --chain=holesky then the clients should handle it 
 mev_type: gwyneth
 mev_params:
   mev_builder_image: gwyneth-rbuilder
