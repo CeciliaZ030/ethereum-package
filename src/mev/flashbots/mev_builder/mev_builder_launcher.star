@@ -12,6 +12,7 @@ MEV_BUILDER_FILES_ARTIFACT_NAME = "mev-rbuilder-config"
 MEV_FILE_PATH_ON_CONTAINER = (
     MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE + MEV_BUILDER_CONFIG_FILENAME
 )
+RBUILDER_PORT_NUM = 8645
 
 
 def new_builder_config(
@@ -29,8 +30,14 @@ def new_builder_config(
         len(participants), len(str(len(participants)))
     )
     if gwyneth:
+        plan.print("%%%%%%%%%% rbuilder extra_data {0} {1}".format(
+            extra_data['l2_networks'],
+            [RBUILDER_PORT_NUM + index + 1 for index in range(len(extra_data["l2_networks"]))]
+        ))
         builder_template_data = new_gwyneth_builder_config_template_data(
             network_params,
+            extra_data["l2_networks"],
+            [RBUILDER_PORT_NUM + index + 1 for index in range(len(extra_data["l2_networks"]))],
             constants.DEFAULT_MEV_PUBKEY,
             constants.DEFAULT_MEV_SECRET_KEY[2:],  # drop the 0x prefix
             mnemonic,
@@ -49,9 +56,16 @@ def new_builder_config(
             extra_data,
             num_of_participants,
         )
-    flashbots_builder_config_template = read_file(
-        static_files.FLASHBOTS_RBUILDER_CONFIG_FILEPATH
-    )
+    
+
+    if gwyneth:
+        flashbots_builder_config_template = read_file(
+            static_files.GWYNETH_RBUILDER_CONFIG_FILEPATH
+        )
+    else: 
+        flashbots_builder_config_template = read_file(
+            static_files.FLASHBOTS_RBUILDER_CONFIG_FILEPATH
+        )
 
     template_and_data = shared_utils.new_template_and_data(
         flashbots_builder_config_template, builder_template_data
@@ -106,6 +120,8 @@ def new_builder_config_template_data(
 
 def new_gwyneth_builder_config_template_data(
     network_params,
+    gwyneth_chain_ids,
+    l2_server_ports,
     pubkey,
     secret,
     mnemonic,
@@ -118,12 +134,15 @@ def new_gwyneth_builder_config_template_data(
         if network_params.network in constants.PUBLIC_NETWORKS
         else "/network-configs/genesis.json",
         "DataDir": "/data/reth/execution-data",
+        "L2ChainID": gwyneth_chain_ids,
+        "L2Port": l2_server_ports,
         "CLEndpoint": "http://cl-{0}-{1}-{2}:{3}".format(
             num_of_participants,
             constants.CL_TYPE.lighthouse,
             constants.EL_TYPE.gwyneth,
             lighthouse.BEACON_HTTP_PORT_NUM,
         ),
+        "BuilderEndpoint": RBUILDER_PORT_NUM,
         "GenesisForkVersion": constants.GENESIS_FORK_VERSION,
         "Relay": "mev-relay-api",
         "RelayPort": flashbots_relay.MEV_RELAY_ENDPOINT_PORT,

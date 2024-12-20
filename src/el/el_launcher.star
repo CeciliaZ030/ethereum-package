@@ -103,6 +103,8 @@ def launch(
     all_el_contexts = []
     network_name = shared_utils.get_network_name(network_params.network)
     for index, participant in enumerate(participants):
+        plan.print("===> EL participents {0}, {1}".format(participant.el_type, mev_builder_type))
+
         cl_type = participant.cl_type
         el_type = participant.el_type
         node_selectors = input_parser.get_client_node_selectors(
@@ -122,12 +124,13 @@ def launch(
             )
             launch_method = gwyneth.launch
         elif el_type == constants.EL_TYPE.gwyneth_builder:
+            plan.print("Using Gwyneth builder for EL participant {0}".format(mev_builder_type))
             el_launcher = gwyneth.new_gwyneth_launcher(
                 el_cl_data,
                 jwt_file,
                 network_params.network,
                 participant.el_l2_networks,
-                builder_type=mev_builder_type,
+                builder_type=True,
             )
             launch_method = gwyneth.launch
         else:    

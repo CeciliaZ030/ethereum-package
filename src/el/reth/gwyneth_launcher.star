@@ -143,17 +143,18 @@ def get_config(
         used_port_assignments[
             "{0}-{1}".format(constants.RPC_PORT_ID, index)
         ] = ports[index]
-    plan.print("Gwyneth reth used_port_assignments \n{0}\n{1}".format(
-        used_port_assignments, get_default_l2_ports(launcher.el_l2_networks)
-    ))
 
-    if launcher.builder_type == "gwyneth-rbuilder":
+
+    if launcher.builder_type:
         used_port_assignments[constants.RBUILDER_PORT_ID] = RBUILDER_PORT_NUM
         for index, _ in enumerate(launcher.el_l2_networks):
             used_port_assignments[
                 "{0}-{1}".format(constants.RBUILDER_PORT_ID, index)
             ] = RBUILDER_PORT_NUM + index + 1
 
+    plan.print("Gwyneth reth used_port_assignments \n{0}".format(
+        used_port_assignments
+    ))
     used_ports = shared_utils.get_port_specs(used_port_assignments)
 
     cmd = [
@@ -185,9 +186,7 @@ def get_config(
         "--http.corsdomain=*",
         # WARNING: The admin info endpoint is enabled so that we can easily get ENR/enode, which means
         #  that users should NOT store private information in these Kurtosis nodes!
-        "--http.api=admin,net,eth,web3,debug,txpool,trace{0}".format(
-            ",flashbots" if launcher.builder_type == "flashbots" else ""
-        ),
+        "--http.api=admin,net,eth,web3,debug,txpool,trace",
         "--ws",
         "--ws.addr=0.0.0.0",
         "--ws.port={0}".format(WS_PORT_NUM),
@@ -245,14 +244,13 @@ def get_config(
         )
         
     env_vars = {
-        "RETH_CMD": ' '.join(cmd),
         "RUST_BACKTRACE": 'full',
         "RUST_LOG": 'debug',
     }
     env_vars = env_vars | participant.el_extra_env_vars
     image = participant.el_image
 
-    if launcher.builder_type == "gwyneth-rbuilder":
+    if launcher.builder_type:
         cl_client_name = service_name.split("-")[4]
         cmd.append("--rbuilder.config={0}".format(flashbots_rbuilder.MEV_FILE_PATH_ON_CONTAINER))
         plan.print("Gwyneth reth-rbuilder cmd {0}".format(cmd))

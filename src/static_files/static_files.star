@@ -101,6 +101,10 @@ FLASHBOTS_RBUILDER_CONFIG_FILEPATH = (
     STATIC_FILES_DIRPATH + "/mev/flashbots/mev_builder/config.toml.tmpl"
 )
 
+GWYNETH_RBUILDER_CONFIG_FILEPATH = (
+    STATIC_FILES_DIRPATH + "/mev/gwyneth/mev_builder/config.toml.tmpl"
+)
+
 COMMIT_BOOST_CONFIG_FILEPATH = (
     STATIC_FILES_DIRPATH + "/mev/commit-boost/cb-config.toml.tmpl"
 )

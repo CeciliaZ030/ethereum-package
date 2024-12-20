@@ -19,6 +19,7 @@ network_params:
     "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65": {"balance": "10ETH"},
     "0x1cbd3b2770909d4e10f157cabc84c7264073c9ec": {"balance": "10ETH"},
   }
+global_log_level: "info"
 
 mev_type: gwyneth
 mev_params:
