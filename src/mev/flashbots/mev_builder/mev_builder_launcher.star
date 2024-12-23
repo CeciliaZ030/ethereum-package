@@ -136,7 +136,7 @@ def new_gwyneth_builder_config_template_data(
         "DataDir": "/data/reth/execution-data",
         "L2ChainID": gwyneth_chain_ids,
         "L2Port": l2_server_ports,
-        "CLEndpoint": "http://cl-{0}-{1}-{2}:{3}".format(
+        "CLEndpoint": "http://cl-{0}-{1}-{2}-builder:{3}".format(
             num_of_participants,
             constants.CL_TYPE.lighthouse,
             constants.EL_TYPE.gwyneth,
