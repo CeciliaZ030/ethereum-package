@@ -169,6 +169,7 @@ def get_beacon_config(
             el_context.ip_addr,
             el_context.engine_rpc_port_num,
         )
+        plan.print("********Execution Engine Endpoint: {0}".format(EXECUTION_ENGINE_ENDPOINT))
 
     public_ports = {}
     discovery_port = BEACON_DISCOVERY_PORT_NUM

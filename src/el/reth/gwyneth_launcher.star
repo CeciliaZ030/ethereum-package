@@ -172,7 +172,7 @@ def get_config(
         [str(port) for port in auth_ports],
         "--l2.ipcs",
         [str(ipc) for ipc in ipcs],
-        "--engine.experimental",
+        # "--engine.experimental",
         "-{0}".format(log_level),
         "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
         "--chain={0}".format(
@@ -245,7 +245,6 @@ def get_config(
         
     env_vars = {
         "RUST_BACKTRACE": 'full',
-        "RUST_LOG": 'debug',
     }
     env_vars = env_vars | participant.el_extra_env_vars
     image = participant.el_image

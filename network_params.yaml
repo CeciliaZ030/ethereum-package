@@ -1,10 +1,10 @@
 participants:
   - el_type: geth
     cl_type: teku
-  # - el_type: gwyneth
-  #   el_image: gwyneth-reth
-  #   el_l2_networks: ['167010']
-  #   cl_type: teku
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['167010']
+    cl_type: teku
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['167010', '167011'] 
@@ -32,7 +32,6 @@ gwyneth_params:
   l2_networks: ['167010', '167011'] 
   # l2_networks: []
   blockscout: true
-
 
 additional_services:
   - blockscout
