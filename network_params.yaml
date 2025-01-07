@@ -1,7 +1,5 @@
 participants:
-  - el_type: geth
-    cl_type: teku
-    validator_count: 0
+  # TODO: hardcoded builder's EL endpoint l1_proposal_url = "http://el-1-gwyneth-teku:8545"
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['167010'] 
@@ -9,6 +7,8 @@ participants:
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['167011'] 
+    cl_type: prysm
+  - el_type: nethermind
     cl_type: prysm
 
 network_params:

@@ -142,6 +142,9 @@ def new_gwyneth_builder_config_template_data(
             constants.EL_TYPE.gwyneth,
             lighthouse.BEACON_HTTP_PORT_NUM,
         ),
+        "ELEndpoint": "http://el-{0}-{1}:{2}".format(
+            num_of_participants, constants.EL_TYPE.gwyneth, constants.CL_TYPE.prysm, constants.EL_PORT_NUM
+        ),
         "BuilderEndpoint": RBUILDER_PORT_NUM,
         "GenesisForkVersion": constants.GENESIS_FORK_VERSION,
         "Relay": "mev-relay-api",
