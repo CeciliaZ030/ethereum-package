@@ -146,7 +146,7 @@ def get_config(
 
 
     if launcher.builder_type:
-        used_port_assignments[constants.RBUILDER_PORT_ID] = RBUILDER_PORT_NUM
+        # used_port_assignments[constants.RBUILDER_PORT_ID] = RBUILDER_PORT_NUM
         for index, _ in enumerate(launcher.el_l2_networks):
             used_port_assignments[
                 "{0}-{1}".format(constants.RBUILDER_PORT_ID, index)

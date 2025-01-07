@@ -1,10 +1,10 @@
 participants:
   - el_type: geth
-    cl_type: teku
+    cl_type: prysm
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['167010']
-    cl_type: teku
+    cl_type: lodestar
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['167010', '167011'] 
