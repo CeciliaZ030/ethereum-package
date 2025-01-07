@@ -75,18 +75,19 @@ ATTR_TO_BE_SKIPPED_AT_ROOT = (
     "network_params",
     "participants",
     "mev_params",
+    "gwyneth_params",
     "blockscout_params",
     "dora_params",
     "docker_cache_params",
     "assertoor_params",
     "prometheus_params",
     "grafana_params",
-    "goomy_blob_params",
     "tx_spammer_params",
     "custom_flood_params",
     "xatu_sentry_params",
     "port_publisher",
     "spamoor_params",
+    "spamoor_blob_params",
 )
 
 
@@ -94,11 +95,15 @@ def input_parser(plan, input_args):
     sanity_check.sanity_check(plan, input_args)
     result = parse_network_params(plan, input_args)
     # add default eth2 input params
+    result["gwyneth_params"] = get_default_gwyneth_params()
     result["blockscout_params"] = get_default_blockscout_params()
     result["dora_params"] = get_default_dora_params()
     result["docker_cache_params"] = get_default_docker_cache_params()
+    # Cecilia: sets default EL images = gwyneth in-process reth-rbuilder
+    # CL image = lighthouse
+    # mev_builder_extra_data = GwynethParams
     result["mev_params"] = get_default_mev_params(
-        result.get("mev_type"), result["network_params"]["preset"]
+        result.get("mev_type"), result["network_params"]["preset"], input_args
     )
     if (
         result["network_params"]["network"] == constants.NETWORK_NAME.kurtosis
@@ -110,7 +115,6 @@ def input_parser(plan, input_args):
     result["tx_spammer_params"] = get_default_tx_spammer_params()
     result["custom_flood_params"] = get_default_custom_flood_params()
     result["disable_peer_scoring"] = False
-    result["goomy_blob_params"] = get_default_goomy_blob_params()
     result["grafana_params"] = get_default_grafana_params()
     result["assertoor_params"] = get_default_assertoor_params()
     result["prometheus_params"] = get_default_prometheus_params()
@@ -121,6 +125,7 @@ def input_parser(plan, input_args):
     result["global_node_selectors"] = {}
     result["port_publisher"] = get_port_publisher_params("default")
     result["spamoor_params"] = get_default_spamoor_params()
+    result["spamoor_blob_params"] = get_default_spamoor_blob_params()
 
     if constants.NETWORK_NAME.shadowfork in result["network_params"]["network"]:
         shadow_base = result["network_params"]["network"].split("-shadowfork")[0]
@@ -140,6 +145,10 @@ def input_parser(plan, input_args):
         if attr not in ATTR_TO_BE_SKIPPED_AT_ROOT and attr in input_args:
             result[attr] = value
         # custom eth2 attributes config
+        elif attr == "gwyneth_params":
+            for sub_attr in input_args["gwyneth_params"]:
+                sub_value = input_args["gwyneth_params"][sub_attr]
+                result["gwyneth_params"][sub_attr] = sub_value
         elif attr == "blockscout_params":
             for sub_attr in input_args["blockscout_params"]:
                 sub_value = input_args["blockscout_params"][sub_attr]
@@ -164,10 +173,6 @@ def input_parser(plan, input_args):
             for sub_attr in input_args["custom_flood_params"]:
                 sub_value = input_args["custom_flood_params"][sub_attr]
                 result["custom_flood_params"][sub_attr] = sub_value
-        elif attr == "goomy_blob_params":
-            for sub_attr in input_args["goomy_blob_params"]:
-                sub_value = input_args["goomy_blob_params"][sub_attr]
-                result["goomy_blob_params"][sub_attr] = sub_value
         elif attr == "assertoor_params":
             for sub_attr in input_args["assertoor_params"]:
                 sub_value = input_args["assertoor_params"][sub_attr]
@@ -190,6 +195,14 @@ def input_parser(plan, input_args):
             for sub_attr in input_args["spamoor_params"]:
                 sub_value = input_args["spamoor_params"][sub_attr]
                 result["spamoor_params"][sub_attr] = sub_value
+        elif attr == "spamoor_blob_params":
+            for sub_attr in input_args["spamoor_blob_params"]:
+                sub_value = input_args["spamoor_blob_params"][sub_attr]
+                result["spamoor_blob_params"][sub_attr] = sub_value
+        elif attr == "ethereum_genesis_generator_params":
+            for sub_attr in input_args["ethereum_genesis_generator_params"]:
+                sub_value = input_args["ethereum_genesis_generator_params"][sub_attr]
+                result["ethereum_genesis_generator_params"][sub_attr] = sub_value
 
     if result.get("disable_peer_scoring"):
         result = enrich_disable_peer_scoring(result)
@@ -199,6 +212,7 @@ def input_parser(plan, input_args):
         constants.FLASHBOTS_MEV_TYPE,
         constants.MEV_RS_MEV_TYPE,
         constants.COMMIT_BOOST_MEV_TYPE,
+        constants.GWYNETH_MEV_TYPE,
     ):
         result = enrich_mev_extra_params(
             result,
@@ -206,6 +220,8 @@ def input_parser(plan, input_args):
             MEV_BOOST_PORT,
             result.get("mev_type"),
         )
+        # Cecilia: Add a EL participant where it starts builder in the same container
+        plan.print("=> enrich_mev_extra_params: {0}".format(result["participants"][-1]))
     elif result.get("mev_type") == None:
         pass
     else:
@@ -230,6 +246,7 @@ def input_parser(plan, input_args):
                 el_image=participant["el_image"],
                 el_log_level=participant["el_log_level"],
                 el_volume_size=participant["el_volume_size"],
+                el_l2_networks=participant["el_l2_networks"],
                 el_extra_params=participant["el_extra_params"],
                 el_extra_env_vars=participant["el_extra_env_vars"],
                 el_extra_labels=participant["el_extra_labels"],
@@ -325,8 +342,6 @@ def input_parser(plan, input_args):
             deneb_fork_epoch=result["network_params"]["deneb_fork_epoch"],
             electra_fork_epoch=result["network_params"]["electra_fork_epoch"],
             fulu_fork_epoch=result["network_params"]["fulu_fork_epoch"],
-            eip7594_fork_epoch=result["network_params"]["eip7594_fork_epoch"],
-            eip7594_fork_version=result["network_params"]["eip7594_fork_version"],
             network=result["network_params"]["network"],
             min_validator_withdrawability_delay=result["network_params"][
                 "min_validator_withdrawability_delay"
@@ -338,13 +353,25 @@ def input_parser(plan, input_args):
             ],
             samples_per_slot=result["network_params"]["samples_per_slot"],
             custody_requirement=result["network_params"]["custody_requirement"],
-            max_blobs_per_block=result["network_params"]["max_blobs_per_block"],
+            max_blobs_per_block_electra=result["network_params"][
+                "max_blobs_per_block_electra"
+            ],
+            target_blobs_per_block_electra=result["network_params"][
+                "target_blobs_per_block_electra"
+            ],
+            max_blobs_per_block_fulu=result["network_params"][
+                "max_blobs_per_block_fulu"
+            ],
+            target_blobs_per_block_fulu=result["network_params"][
+                "target_blobs_per_block_fulu"
+            ],
             preset=result["network_params"]["preset"],
             additional_preloaded_contracts=result["network_params"][
                 "additional_preloaded_contracts"
             ],
             devnet_repo=result["network_params"]["devnet_repo"],
             prefunded_accounts=result["network_params"]["prefunded_accounts"],
+            gossip_max_size=result["network_params"]["gossip_max_size"],
         ),
         mev_params=struct(
             mev_relay_image=result["mev_params"]["mev_relay_image"],
@@ -388,10 +415,6 @@ def input_parser(plan, input_args):
         tx_spammer_params=struct(
             image=result["tx_spammer_params"]["image"],
             tx_spammer_extra_args=result["tx_spammer_params"]["tx_spammer_extra_args"],
-        ),
-        goomy_blob_params=struct(
-            image=result["goomy_blob_params"]["image"],
-            goomy_blob_args=result["goomy_blob_params"]["goomy_blob_args"],
         ),
         prometheus_params=struct(
             storage_tsdb_retention_time=result["prometheus_params"][
@@ -438,11 +461,20 @@ def input_parser(plan, input_args):
         ),
         spamoor_params=struct(
             image=result["spamoor_params"]["image"],
-            tx_type=result["spamoor_params"]["tx_type"],
+            scenario=result["spamoor_params"]["scenario"],
             throughput=result["spamoor_params"]["throughput"],
             max_pending=result["spamoor_params"]["max_pending"],
             max_wallets=result["spamoor_params"]["max_wallets"],
             spamoor_extra_args=result["spamoor_params"]["spamoor_extra_args"],
+        ),
+        spamoor_blob_params=struct(
+            image=result["spamoor_blob_params"]["image"],
+            scenario=result["spamoor_blob_params"]["scenario"],
+            throughput=result["spamoor_blob_params"]["throughput"],
+            max_blobs=result["spamoor_blob_params"]["max_blobs"],
+            max_pending=result["spamoor_blob_params"]["max_pending"],
+            max_wallets=result["spamoor_blob_params"]["max_wallets"],
+            spamoor_extra_args=result["spamoor_blob_params"]["spamoor_extra_args"],
         ),
         additional_services=result["additional_services"],
         wait_for_finalization=result["wait_for_finalization"],
@@ -466,6 +498,9 @@ def input_parser(plan, input_args):
         keymanager_enabled=result["keymanager_enabled"],
         checkpoint_sync_enabled=result["checkpoint_sync_enabled"],
         checkpoint_sync_url=result["checkpoint_sync_url"],
+        ethereum_genesis_generator_params=struct(
+            image=result["ethereum_genesis_generator_params"]["image"],
+        ),
         port_publisher=struct(
             nat_exit_ip=result["port_publisher"]["nat_exit_ip"],
             cl_enabled=result["port_publisher"]["cl"]["enabled"],
@@ -854,6 +889,7 @@ def default_input_args(input_args):
         "keymanager_enabled": False,
         "checkpoint_sync_enabled": False,
         "checkpoint_sync_url": "",
+        "ethereum_genesis_generator_params": get_default_ethereum_genesis_generator_params(),
         "port_publisher": {
             "nat_exit_ip": constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
             "public_port_start": None,
@@ -885,17 +921,19 @@ def default_network_params():
         "deneb_fork_epoch": 0,
         "electra_fork_epoch": constants.ELECTRA_FORK_EPOCH,
         "fulu_fork_epoch": constants.FULU_FORK_EPOCH,
-        "eip7594_fork_epoch": constants.EIP7594_FORK_EPOCH,
-        "eip7594_fork_version": "0x60000038",
         "network_sync_base_url": "https://snapshots.ethpandaops.io/",
         "data_column_sidecar_subnet_count": 128,
         "samples_per_slot": 8,
         "custody_requirement": 4,
-        "max_blobs_per_block": 6,
+        "max_blobs_per_block_electra": 9,
+        "target_blobs_per_block_electra": 6,
+        "max_blobs_per_block_fulu": 12,
+        "target_blobs_per_block_fulu": 9,
         "preset": "mainnet",
         "additional_preloaded_contracts": {},
         "devnet_repo": "ethpandaops",
         "prefunded_accounts": {},
+        "gossip_max_size": 10485760,
     }
 
 
@@ -922,17 +960,19 @@ def default_minimal_network_params():
         "deneb_fork_epoch": 0,
         "electra_fork_epoch": constants.ELECTRA_FORK_EPOCH,
         "fulu_fork_epoch": constants.FULU_FORK_EPOCH,
-        "eip7594_fork_epoch": constants.EIP7594_FORK_EPOCH,
-        "eip7594_fork_version": "0x60000038",
         "network_sync_base_url": "https://snapshots.ethpandaops.io/",
         "data_column_sidecar_subnet_count": 128,
         "samples_per_slot": 8,
         "custody_requirement": 4,
-        "max_blobs_per_block": 6,
+        "max_blobs_per_block_electra": 9,
+        "target_blobs_per_block_electra": 6,
+        "max_blobs_per_block_fulu": 12,
+        "target_blobs_per_block_fulu": 9,
         "preset": "minimal",
         "additional_preloaded_contracts": {},
         "devnet_repo": "ethpandaops",
         "prefunded_accounts": {},
+        "gossip_max_size": 10485760,
     }
 
 
@@ -946,6 +986,7 @@ def default_participant():
         "el_extra_params": [],
         "el_tolerations": [],
         "el_volume_size": 0,
+        "el_l2_networks": None,
         "el_min_cpu": 0,
         "el_max_cpu": 0,
         "el_min_mem": 0,
@@ -1003,6 +1044,13 @@ def default_participant():
         "keymanager_enabled": None,
     }
 
+def get_default_gwyneth_params():
+    return {
+        "rollup_contract": "0x9fCF7D13d10dEdF17d0f24C62f0cf4ED462f65b7",
+        "proposer_key": "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d",
+        "l2_networks": [],
+        "blockscout": False,
+    }
 
 def get_default_blockscout_params():
     return {
@@ -1014,7 +1062,7 @@ def get_default_blockscout_params():
 
 def get_default_dora_params():
     return {
-        "image": "ethpandaops/dora:latest",
+        "image": constants.DEFAULT_DORA_IMAGE,
         "env": {},
     }
 
@@ -1029,7 +1077,7 @@ def get_default_docker_cache_params():
     }
 
 
-def get_default_mev_params(mev_type, preset):
+def get_default_mev_params(mev_type, preset, input_args):
     mev_relay_image = constants.DEFAULT_FLASHBOTS_RELAY_IMAGE
     mev_builder_image = constants.DEFAULT_FLASHBOTS_BUILDER_IMAGE
     if preset == "minimal":
@@ -1079,8 +1127,27 @@ def get_default_mev_params(mev_type, preset):
         mev_boost_image = constants.DEFAULT_COMMIT_BOOST_MEV_BOOST_IMAGE
         mev_builder_cl_image = DEFAULT_CL_IMAGES[constants.CL_TYPE.lighthouse]
         mev_builder_extra_data = (
-            "0x436f6d6d69742d426f6f737420f09f93bb"  # Commit-Boost 📻
+            "0x436F6D6D69742D426F6F737420F09F93BB"  # Commit-Boost 📻
         )
+
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        # TODO: l2 relay + mev-boost
+        return {
+            "mev_relay_image": "",
+            "mev_builder_image": constants.DEFAULT_GWYNETH_BUILDER_IMAGE,
+            "mev_builder_cl_image": DEFAULT_CL_IMAGES[constants.CL_TYPE.lighthouse],
+            "mev_builder_extra_data": input_args["gwyneth_params"],
+            "mev_builder_extra_args": [],
+            "mev_boost_image": "",
+            "mev_boost_args": [],
+            "mev_relay_api_extra_args": [],
+            "mev_relay_housekeeper_extra_args": [],
+            "mev_relay_website_extra_args": [],
+            "mev_flood_image": "",
+            "mev_flood_extra_args": [],
+            "mev_flood_seconds_per_bundle": 0,
+            "mev_builder_prometheus_config": mev_builder_prometheus_config,
+        }
 
     return {
         "mev_relay_image": mev_relay_image,
@@ -1107,13 +1174,9 @@ def get_default_tx_spammer_params():
     }
 
 
-def get_default_goomy_blob_params():
-    return {"image": "ethpandaops/goomy-blob:master", "goomy_blob_args": []}
-
-
 def get_default_assertoor_params():
     return {
-        "image": "ethpandaops/assertoor:latest",
+        "image": constants.DEFAULT_ASSERTOOR_IMAGE,
         "run_stability_check": False,
         "run_block_proposal_check": False,
         "run_lifecycle_test": False,
@@ -1169,10 +1232,22 @@ def get_default_xatu_sentry_params():
 def get_default_spamoor_params():
     return {
         "image": "ethpandaops/spamoor:latest",
-        "tx_type": "eoatx",
+        "scenario": "eoatx",
         "throughput": 1000,
         "max_pending": 1000,
         "max_wallets": 500,
+        "spamoor_extra_args": [],
+    }
+
+
+def get_default_spamoor_blob_params():
+    return {
+        "image": "ethpandaops/spamoor:latest",
+        "scenario": "blob-combined",
+        "throughput": 3,
+        "max_blobs": 2,
+        "max_pending": 6,
+        "max_wallets": 29,
         "spamoor_extra_args": [],
     }
 
@@ -1308,6 +1383,36 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
 
         parsed_arguments_dict["participants"].append(mev_participant)
 
+    if mev_type == constants.GWYNETH_MEV_TYPE:
+        mev_participant = default_participant()
+        mev_participant["el_type"] = "gwyneth-builder"
+        mev_participant["el_l2_networks"] = parsed_arguments_dict["gwyneth_params"]["l2_networks"]
+        mev_participant.update(
+            {
+                # Cecilia: FLASHBOTS_MEV_TYPE contains reth + builder binary
+                # https://github.com/ethpandaops/rbuilder/blob/develop/entrypoint.sh
+                # GWYNETH_MEV_TYPE starts a in-process reth-rbuilder
+                "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
+                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
+                "cl_log_level": parsed_arguments_dict["global_log_level"],
+                "cl_extra_params": [
+                    "--always-prepare-payload",
+                    "--prepare-payload-lookahead",
+                    "12000",
+                    "--disable-peer-scoring",
+                ],
+                "el_extra_params": parsed_arguments_dict["mev_params"][
+                    "mev_builder_extra_args"
+                ],
+                "validator_count": 0,
+                "prometheus_config": parsed_arguments_dict["mev_params"][
+                    "mev_builder_prometheus_config"
+                ],
+            }
+        )
+
+        parsed_arguments_dict["participants"].append(mev_participant)
+
     if mev_type == constants.MEV_RS_MEV_TYPE:
         mev_participant = default_participant()
         mev_participant["el_type"] = "reth-builder"
@@ -1369,10 +1474,11 @@ def docker_cache_image_override(plan, result):
         "mev_params.mev_flood_image",
         "xatu_sentry_params.xatu_sentry_image",
         "tx_spammer_params.image",
-        "goomy_blob_params.image",
         "prometheus_params.image",
         "grafana_params.image",
         "spamoor_params.image",
+        "spamoor_blob_params.image",
+        "ethereum_genesis_generator_params.image",
     ]
 
     if result["docker_cache_params"]["url"] == "":
@@ -1444,3 +1550,9 @@ def docker_cache_image_override(plan, result):
                     tooling_image_key
                 )
             )
+
+
+def get_default_ethereum_genesis_generator_params():
+    return {
+        "image": constants.DEFAULT_ETHEREUM_GENESIS_GENERATOR_IMAGE,
+    }

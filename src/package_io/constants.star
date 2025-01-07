@@ -5,6 +5,8 @@ EL_TYPE = struct(
     besu="besu",
     reth="reth",
     reth_builder="reth-builder",
+    gwyneth ="gwyneth",
+    gwyneth_builder ="gwyneth-builder",
     ethereumjs="ethereumjs",
     nimbus="nimbus",
 )
@@ -85,8 +87,14 @@ MOCK_MEV_TYPE = "mock"
 FLASHBOTS_MEV_TYPE = "flashbots"
 MEV_RS_MEV_TYPE = "mev-rs"
 COMMIT_BOOST_MEV_TYPE = "commit-boost"
+GWYNETH_MEV_TYPE = "gwyneth"
+DEFAULT_DORA_IMAGE = "ethpandaops/dora:latest"
+DEFAULT_ASSERTOOR_IMAGE = "ethpandaops/assertoor:latest"
 
 DEFAULT_SNOOPER_IMAGE = "ethpandaops/rpc-snooper:latest"
+DEFAULT_ETHEREUM_GENESIS_GENERATOR_IMAGE = (
+    "ethpandaops/ethereum-genesis-generator:3.5.1"
+)
 DEFAULT_FLASHBOTS_RELAY_IMAGE = "flashbots/mev-boost-relay:0.29.2a3"
 DEFAULT_FLASHBOTS_BUILDER_IMAGE = "ethpandaops/reth-rbuilder:develop"
 DEFAULT_FLASHBOTS_MEV_BOOST_IMAGE = "flashbots/mev-boost"
@@ -97,6 +105,7 @@ DEFAULT_MEV_PUBKEY = "0xa55c1285d84ba83a5ad26420cd5ad3091e49c55a813eee651cd467db
 DEFAULT_MEV_SECRET_KEY = (
     "0x607a11b45a7219cc61a3d9c5fd08c7eebd602a6a19a977f8d3771d5711a550f2"
 )
+DEFAULT_GWYNETH_BUILDER_IMAGE = "gwyneth-rbuilder"
 
 DEFAULT_MNEMONIC = "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete"
 
@@ -111,8 +120,6 @@ ELECTRA_FORK_VERSION = "0x60000038"
 ELECTRA_FORK_EPOCH = 100000000
 FULU_FORK_VERSION = "0x70000038"
 FULU_FORK_EPOCH = 100000001
-EIP7594_FORK_VERSION = "0x80000038"
-EIP7594_FORK_EPOCH = 100000002
 
 MAX_LABEL_LENGTH = 63
 
@@ -120,12 +127,6 @@ CONTAINER_REGISTRY = struct(
     dockerhub="/",
     ghcr="ghcr.io",
     gcr="gcr.io",
-)
-
-
-ETHEREUM_GENESIS_GENERATOR = struct(
-    default_genesis_generator_image="ethpandaops/ethereum-genesis-generator:3.4.2",  # Default
-    verkle_genesis="ethpandaops/ethereum-genesis-generator:verkle-gen-v1.0.0",
 )
 
 NETWORK_NAME = struct(

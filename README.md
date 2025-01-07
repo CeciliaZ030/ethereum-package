@@ -534,7 +534,7 @@ network_params:
   # Defaults to 256 epoch ~27 hours
   shard_committee_period: 256
 
-  # The epoch at which the deneb/electra/eip7594(peerdas) forks are set to occur. Note: PeerDAS and Electra clients are currently
+  # The epoch at which the deneb/electra/fulu forks are set to occur. Note: PeerDAS and Electra clients are currently
   # working on forks. So set either one of the below forks.
   # Altair fork epoch
   # Defaults to 0
@@ -560,12 +560,6 @@ network_params:
   # Defaults to 100000001
   fulu_fork_epoch: 100000001
 
-  # Eip7594 fork epoch
-  # Defaults to 100000002
-  eip7594_fork_epoch: 100000002
-  # The fork version to set if the eip7594 fork is active
-  eip7594_fork_version: "0x60000038"
-
 
   # Network sync base url for syncing public networks from a custom snapshot (mostly useful for shadowforks)
   # Defaults to "https://snapshots.ethpandaops.io/"
@@ -580,8 +574,16 @@ network_params:
   samples_per_slot: 8
   # Minimum number of subnets an honest node custodies and serves samples from
   custody_requirement: 4
-  # Maximum number of blobs per block
-  max_blobs_per_block: 6
+
+  # Maximum number of blobs per block for Electra fork
+  max_blobs_per_block_electra: 9
+  # Target number of blobs per block for Electra fork
+  target_blobs_per_block_electra: 6
+
+  # Maximum number of blobs per block for Fulu fork
+  max_blobs_per_block_fulu: 12
+  # Target number of blobs per block for Fulu fork
+  target_blobs_per_block_fulu: 9
 
   # Preset for the network
   # Default: "mainnet"
@@ -620,6 +622,13 @@ network_params:
   # prefunded_accounts: '{"0x25941dC771bB64514Fc8abBce970307Fb9d477e9": {"balance": "10ETH"}, "0x4107be99052d895e3ee461C685b042Aa975ab5c0": {"balance": "1ETH"}}'
   prefunded_accounts: {}
 
+  # Maximum size of gossip messages in bytes
+  # 10 * 2**20 (= 10485760, 10 MiB)
+  # Defaults to 10485760 (10MB)
+  gossip_max_size: 10485760
+
+
+
 # Global parameters for the network
 
 # By default includes
@@ -635,7 +644,8 @@ additional_services:
   - tx_spammer
   - blob_spammer
   - custom_flood
-  - goomy_blob
+  - spamoor
+  - spamoor_blob
   - el_forkmon
   - blockscout
   - beacon_metrics_gazer
@@ -676,14 +686,6 @@ tx_spammer_params:
   image: "ethpandaops/tx-fuzz:master"
   # A list of optional extra params that will be passed to the TX Spammer container for modifying its behaviour
   tx_spammer_extra_args: []
-
-# Configuration place for goomy the blob spammer - https://github.com/ethpandaops/goomy-blob
-goomy_blob_params:
-  # Goomy Blob docker image to use
-  # Defaults to the latest
-  image: "ethpandaops/goomy-blob:latest"
-  # A list of optional params that will be passed to the blob-spammer comamnd for modifying its behaviour
-  goomy_blob_args: []
 
 # Configuration place for prometheus
 prometheus_params:
@@ -927,14 +929,15 @@ checkpoint_sync_enabled: false
 # Global flag to set checkpoint sync url
 checkpoint_sync_url: ""
 
-# Spamoor params
+# Configuration place for spamoor as transaction spammer
 spamoor_params:
   # The image to use for spamoor
   image: ethpandaops/spamoor:latest
-  # The type of transactions to send
-  # Valid values are eoatx, erctx, deploytx, depoy-destruct, blobs, gasburnertx
+  # The spamoor scenario to use (see https://github.com/ethpandaops/spamoor)
+  # Valid scenarios are:
+  #  eoatx, erctx, deploytx, depoy-destruct, blobs, gasburnertx
   # Defaults to eoatx
-  tx_type: eoatx
+  scenario: eoatx
   # Throughput of spamoor
   # Defaults to 1000
   throughput: 1000
@@ -948,7 +951,40 @@ spamoor_params:
   # Defaults to empty
   spamoor_extra_args: []
 
-# Global paarameter to set the exit ip address of services and public ports
+# Configuration place for spammor as blob spammer
+spamoor_blob_params:
+  # spamoor docker image to use
+  # Defaults to the latest
+  image: "ethpandaops/spamoor:latest"
+  # The spamoor blob scenario to use (see https://github.com/ethpandaops/spamoor)
+  # Valid blob scenarios are:
+  # - blobs (normal blob transactions only)
+  # - blob-combined (normal & special blobs with replacements)
+  # - blob-conflicting (conflicting blob & dynfee transactions)
+  # - blob-replacements (normal blobs with replacement blob transactions)
+  # Defaults to blob-combined
+  scenario: blob-combined
+  # Throughput of spamoor
+  # Defaults to 3
+  throughput: 3
+  # Maximum number of blobs per transaction
+  # Defaults to 2
+  max_blobs: 2
+  # Max pending blob transactions for spamoor
+  # Defaults to 6
+  max_pending: 6
+  # Max wallets for spamoor
+  # Defaults to 20
+  max_wallets: 20
+  # A list of optional params that will be passed to the spamoor comamnd for modifying its behaviour
+  spamoor_extra_args: []
+
+# Ethereum genesis generator params
+ethereum_genesis_generator_params:
+  # The image to use for ethereum genesis generator
+  image: ethpandaops/ethereum-genesis-generator:3.5.1
+
+# Global parameter to set the exit ip address of services and public ports
 port_publisher:
   # if you have a service that you want to expose on a specific interfact; set that IP here
   # if you set it to auto it gets the public ip from ident.me and sets it
@@ -1181,7 +1217,7 @@ Here's a table of where the keys are used
 | 0             | mev_custom_flood    |                   | ✅              | As the receiver of balance |
 | 1             | blob_spammer        | ✅                |                 | As the sender of blobs     |
 | 3             | transaction_spammer | ✅                |                 | To spam transactions with  |
-| 4             | goomy_blob          | ✅                |                 | As the sender of blobs     |
+| 4             | spamoor_blob        | ✅                |                 | As the sender of blobs     |
 | 6             | mev_flood           | ✅                |                 | As the contract owner      |
 | 7             | mev_flood           | ✅                |                 | As the user_key            |
 | 8             | assertoor           | ✅                | ✅              | As the funding for tests   |

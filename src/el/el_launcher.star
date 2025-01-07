@@ -7,6 +7,7 @@ besu = import_module("./besu/besu_launcher.star")
 erigon = import_module("./erigon/erigon_launcher.star")
 nethermind = import_module("./nethermind/nethermind_launcher.star")
 reth = import_module("./reth/reth_launcher.star")
+gwyneth = import_module("./reth/gwyneth_launcher.star")
 ethereumjs = import_module("./ethereumjs/ethereumjs_launcher.star")
 nimbus_eth1 = import_module("./nimbus-eth1/nimbus_launcher.star")
 
@@ -27,6 +28,7 @@ def launch(
     mev_builder_type,
     mev_params,
 ):
+    empty_l2_networks = list() # Add per participant if exists
     el_launchers = {
         constants.EL_TYPE.geth: {
             "launcher": geth.new_geth_launcher(
@@ -103,6 +105,8 @@ def launch(
     all_el_contexts = []
     network_name = shared_utils.get_network_name(network_params.network)
     for index, participant in enumerate(participants):
+        plan.print("===> EL participents {0}, {1}".format(participant.el_type, mev_builder_type))
+
         cl_type = participant.cl_type
         el_type = participant.el_type
         node_selectors = input_parser.get_client_node_selectors(
@@ -113,17 +117,35 @@ def launch(
             participant.el_tolerations, participant.tolerations, global_tolerations
         )
 
-        if el_type not in el_launchers:
-            fail(
-                "Unsupported launcher '{0}', need one of '{1}'".format(
-                    el_type, ",".join(el_launchers.keys())
-                )
+        if el_type == constants.EL_TYPE.gwyneth:
+            el_launcher = gwyneth.new_gwyneth_launcher(
+                el_cl_data,
+                jwt_file,
+                network_params.network,
+                participant.el_l2_networks,
             )
-
-        el_launcher, launch_method = (
-            el_launchers[el_type]["launcher"],
-            el_launchers[el_type]["launch_method"],
-        )
+            launch_method = gwyneth.launch
+        elif el_type == constants.EL_TYPE.gwyneth_builder:
+            plan.print("Using Gwyneth builder for EL participant {0}".format(mev_builder_type))
+            el_launcher = gwyneth.new_gwyneth_launcher(
+                el_cl_data,
+                jwt_file,
+                network_params.network,
+                participant.el_l2_networks,
+                builder_type=True,
+            )
+            launch_method = gwyneth.launch
+        else:    
+            if el_type not in el_launchers:
+                fail(
+                    "Unsupported launcher '{0}', need one of '{1}'".format(
+                        el_type, ",".join(el_launchers.keys())
+                    )
+                )
+            el_launcher, launch_method = (
+                el_launchers[el_type]["launcher"],
+                el_launchers[el_type]["launch_method"],
+            )
 
         # Zero-pad the index using the calculated zfill value
         index_str = shared_utils.zfill_custom(index + 1, len(str(len(participants))))

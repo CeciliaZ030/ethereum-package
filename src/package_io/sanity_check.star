@@ -8,6 +8,7 @@ PARTICIPANT_CATEGORIES = {
         "el_extra_params",
         "el_tolerations",
         "el_volume_size",
+        "el_l2_networks",
         "el_min_cpu",
         "el_max_cpu",
         "el_min_mem",
@@ -74,6 +75,7 @@ PARTICIPANT_MATRIX_PARAMS = {
             "el_extra_params",
             "el_tolerations",
             "el_volume_size",
+            "el_l2_networks",
             "el_min_cpu",
             "el_max_cpu",
             "el_min_mem",
@@ -159,17 +161,19 @@ SUBCATEGORY_PARAMS = {
         "deneb_fork_epoch",
         "electra_fork_epoch",
         "fulu_fork_epoch",
-        "eip7594_fork_epoch",
-        "eip7594_fork_version",
         "network_sync_base_url",
         "data_column_sidecar_subnet_count",
         "samples_per_slot",
         "custody_requirement",
-        "max_blobs_per_block",
+        "max_blobs_per_block_electra",
+        "target_blobs_per_block_electra",
+        "max_blobs_per_block_fulu",
+        "target_blobs_per_block_fulu",
         "preset",
         "additional_preloaded_contracts",
         "devnet_repo",
         "prefunded_accounts",
+        "gossip_max_size",
     ],
     "blockscout_params": [
         "image",
@@ -190,9 +194,6 @@ SUBCATEGORY_PARAMS = {
     "tx_spammer_params": [
         "image",
         "tx_spammer_extra_args",
-    ],
-    "goomy_blob_params": [
-        "goomy_blob_args",
     ],
     "prometheus_params": [
         "min_cpu",
@@ -237,6 +238,12 @@ SUBCATEGORY_PARAMS = {
         "mev_flood_seconds_per_bundle",
         "custom_flood_params",
     ],
+    "gwyneth_params": [
+        "rollup_contract",
+        "proposer_key",
+        "l2_networks",
+        "blockscout"
+    ],
     "xatu_sentry_params": [
         "xatu_sentry_image",
         "xatu_server_addr",
@@ -246,11 +253,23 @@ SUBCATEGORY_PARAMS = {
     ],
     "spamoor_params": [
         "image",
-        "tx_type",
+        "scenario",
         "throughput",
         "max_pending",
         "max_wallets",
         "spamoor_extra_args",
+    ],
+    "spamoor_blob_params": [
+        "image",
+        "scenario",
+        "throughput",
+        "max_blobs",
+        "max_pending",
+        "max_wallets",
+        "spamoor_extra_args",
+    ],
+    "ethereum_genesis_generator_params": [
+        "image",
     ],
     "port_publisher": [
         "nat_exit_ip",
@@ -268,7 +287,6 @@ ADDITIONAL_SERVICES_PARAMS = [
     "tx_spammer",
     "blob_spammer",
     "custom_flood",
-    "goomy_blob",
     "el_forkmon",
     "blockscout",
     "beacon_metrics_gazer",
@@ -282,6 +300,7 @@ ADDITIONAL_SERVICES_PARAMS = [
     "apache",
     "tracoor",
     "spamoor",
+    "spamoor_blob",
 ]
 
 ADDITIONAL_CATEGORY_PARAMS = {

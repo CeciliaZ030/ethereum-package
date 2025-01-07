@@ -7,7 +7,7 @@ NOT_PROVIDED_APPLICATION_PROTOCOL = ""
 NOT_PROVIDED_WAIT = "not-provided-wait"
 
 MAX_PORTS_PER_CL_NODE = 5
-MAX_PORTS_PER_EL_NODE = 5
+MAX_PORTS_PER_EL_NODE = 10 # Cecilia: 2 extra ports per new gwyneth node 
 MAX_PORTS_PER_VC_NODE = 3
 MAX_PORTS_PER_REMOTE_SIGNER_NODE = 2
 MAX_PORTS_PER_ADDITIONAL_SERVICE = 2
@@ -318,6 +318,8 @@ def get_port_specs(port_assignments):
             ports.update(
                 {port_id: new_port_spec(port, TCP_PROTOCOL, HTTP_APPLICATION_PROTOCOL)}
             )
+        else:
+            ports.update({port_id: new_port_spec(port, TCP_PROTOCOL)})
     return ports
 
 
