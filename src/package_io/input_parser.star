@@ -82,11 +82,12 @@ ATTR_TO_BE_SKIPPED_AT_ROOT = (
     "assertoor_params",
     "prometheus_params",
     "grafana_params",
-    "goomy_blob_params",
     "tx_spammer_params",
     "custom_flood_params",
     "xatu_sentry_params",
     "port_publisher",
+    "spamoor_params",
+    "spamoor_blob_params",
 )
 
 
@@ -114,7 +115,6 @@ def input_parser(plan, input_args):
     result["tx_spammer_params"] = get_default_tx_spammer_params()
     result["custom_flood_params"] = get_default_custom_flood_params()
     result["disable_peer_scoring"] = False
-    result["goomy_blob_params"] = get_default_goomy_blob_params()
     result["grafana_params"] = get_default_grafana_params()
     result["assertoor_params"] = get_default_assertoor_params()
     result["prometheus_params"] = get_default_prometheus_params()
@@ -124,6 +124,8 @@ def input_parser(plan, input_args):
     result["global_tolerations"] = []
     result["global_node_selectors"] = {}
     result["port_publisher"] = get_port_publisher_params("default")
+    result["spamoor_params"] = get_default_spamoor_params()
+    result["spamoor_blob_params"] = get_default_spamoor_blob_params()
 
     if constants.NETWORK_NAME.shadowfork in result["network_params"]["network"]:
         shadow_base = result["network_params"]["network"].split("-shadowfork")[0]
@@ -171,10 +173,6 @@ def input_parser(plan, input_args):
             for sub_attr in input_args["custom_flood_params"]:
                 sub_value = input_args["custom_flood_params"][sub_attr]
                 result["custom_flood_params"][sub_attr] = sub_value
-        elif attr == "goomy_blob_params":
-            for sub_attr in input_args["goomy_blob_params"]:
-                sub_value = input_args["goomy_blob_params"][sub_attr]
-                result["goomy_blob_params"][sub_attr] = sub_value
         elif attr == "assertoor_params":
             for sub_attr in input_args["assertoor_params"]:
                 sub_value = input_args["assertoor_params"][sub_attr]
@@ -193,6 +191,18 @@ def input_parser(plan, input_args):
                 result["xatu_sentry_params"][sub_attr] = sub_value
         elif attr == "port_publisher":
             result["port_publisher"] = get_port_publisher_params("user", input_args)
+        elif attr == "spamoor_params":
+            for sub_attr in input_args["spamoor_params"]:
+                sub_value = input_args["spamoor_params"][sub_attr]
+                result["spamoor_params"][sub_attr] = sub_value
+        elif attr == "spamoor_blob_params":
+            for sub_attr in input_args["spamoor_blob_params"]:
+                sub_value = input_args["spamoor_blob_params"][sub_attr]
+                result["spamoor_blob_params"][sub_attr] = sub_value
+        elif attr == "ethereum_genesis_generator_params":
+            for sub_attr in input_args["ethereum_genesis_generator_params"]:
+                sub_value = input_args["ethereum_genesis_generator_params"][sub_attr]
+                result["ethereum_genesis_generator_params"][sub_attr] = sub_value
 
     if result.get("disable_peer_scoring"):
         result = enrich_disable_peer_scoring(result)
@@ -251,7 +261,6 @@ def input_parser(plan, input_args):
                 vc_type=participant["vc_type"],
                 vc_image=participant["vc_image"],
                 vc_log_level=participant["vc_log_level"],
-                vc_count=participant["vc_count"],
                 vc_tolerations=participant["vc_tolerations"],
                 cl_extra_params=participant["cl_extra_params"],
                 cl_extra_labels=participant["cl_extra_labels"],
@@ -327,11 +336,12 @@ def input_parser(plan, input_args):
             churn_limit_quotient=result["network_params"]["churn_limit_quotient"],
             ejection_balance=result["network_params"]["ejection_balance"],
             eth1_follow_distance=result["network_params"]["eth1_follow_distance"],
+            altair_fork_epoch=result["network_params"]["altair_fork_epoch"],
+            bellatrix_fork_epoch=result["network_params"]["bellatrix_fork_epoch"],
+            capella_fork_epoch=result["network_params"]["capella_fork_epoch"],
             deneb_fork_epoch=result["network_params"]["deneb_fork_epoch"],
             electra_fork_epoch=result["network_params"]["electra_fork_epoch"],
             fulu_fork_epoch=result["network_params"]["fulu_fork_epoch"],
-            eip7594_fork_epoch=result["network_params"]["eip7594_fork_epoch"],
-            eip7594_fork_version=result["network_params"]["eip7594_fork_version"],
             network=result["network_params"]["network"],
             min_validator_withdrawability_delay=result["network_params"][
                 "min_validator_withdrawability_delay"
@@ -343,13 +353,25 @@ def input_parser(plan, input_args):
             ],
             samples_per_slot=result["network_params"]["samples_per_slot"],
             custody_requirement=result["network_params"]["custody_requirement"],
-            max_blobs_per_block=result["network_params"]["max_blobs_per_block"],
+            max_blobs_per_block_electra=result["network_params"][
+                "max_blobs_per_block_electra"
+            ],
+            target_blobs_per_block_electra=result["network_params"][
+                "target_blobs_per_block_electra"
+            ],
+            max_blobs_per_block_fulu=result["network_params"][
+                "max_blobs_per_block_fulu"
+            ],
+            target_blobs_per_block_fulu=result["network_params"][
+                "target_blobs_per_block_fulu"
+            ],
             preset=result["network_params"]["preset"],
             additional_preloaded_contracts=result["network_params"][
                 "additional_preloaded_contracts"
             ],
             devnet_repo=result["network_params"]["devnet_repo"],
             prefunded_accounts=result["network_params"]["prefunded_accounts"],
+            gossip_max_size=result["network_params"]["gossip_max_size"],
         ),
         mev_params=struct(
             mev_relay_image=result["mev_params"]["mev_relay_image"],
@@ -377,6 +399,7 @@ def input_parser(plan, input_args):
         blockscout_params=struct(
             image=result["blockscout_params"]["image"],
             verif_image=result["blockscout_params"]["verif_image"],
+            frontend_image=result["blockscout_params"]["frontend_image"],
         ),
         dora_params=struct(
             image=result["dora_params"]["image"],
@@ -392,10 +415,6 @@ def input_parser(plan, input_args):
         tx_spammer_params=struct(
             image=result["tx_spammer_params"]["image"],
             tx_spammer_extra_args=result["tx_spammer_params"]["tx_spammer_extra_args"],
-        ),
-        goomy_blob_params=struct(
-            image=result["goomy_blob_params"]["image"],
-            goomy_blob_args=result["goomy_blob_params"]["goomy_blob_args"],
         ),
         prometheus_params=struct(
             storage_tsdb_retention_time=result["prometheus_params"][
@@ -440,6 +459,23 @@ def input_parser(plan, input_args):
                 "interval_between_transactions"
             ],
         ),
+        spamoor_params=struct(
+            image=result["spamoor_params"]["image"],
+            scenario=result["spamoor_params"]["scenario"],
+            throughput=result["spamoor_params"]["throughput"],
+            max_pending=result["spamoor_params"]["max_pending"],
+            max_wallets=result["spamoor_params"]["max_wallets"],
+            spamoor_extra_args=result["spamoor_params"]["spamoor_extra_args"],
+        ),
+        spamoor_blob_params=struct(
+            image=result["spamoor_blob_params"]["image"],
+            scenario=result["spamoor_blob_params"]["scenario"],
+            throughput=result["spamoor_blob_params"]["throughput"],
+            max_blobs=result["spamoor_blob_params"]["max_blobs"],
+            max_pending=result["spamoor_blob_params"]["max_pending"],
+            max_wallets=result["spamoor_blob_params"]["max_wallets"],
+            spamoor_extra_args=result["spamoor_blob_params"]["spamoor_extra_args"],
+        ),
         additional_services=result["additional_services"],
         wait_for_finalization=result["wait_for_finalization"],
         global_log_level=result["global_log_level"],
@@ -462,6 +498,9 @@ def input_parser(plan, input_args):
         keymanager_enabled=result["keymanager_enabled"],
         checkpoint_sync_enabled=result["checkpoint_sync_enabled"],
         checkpoint_sync_url=result["checkpoint_sync_url"],
+        ethereum_genesis_generator_params=struct(
+            image=result["ethereum_genesis_generator_params"]["image"],
+        ),
         port_publisher=struct(
             nat_exit_ip=result["port_publisher"]["nat_exit_ip"],
             cl_enabled=result["port_publisher"]["cl"]["enabled"],
@@ -654,30 +693,6 @@ def parse_network_params(plan, input_args):
                 remote_signer_type, ""
             )
 
-        if result["parallel_keystore_generation"] and participant["vc_count"] != 1:
-            fail(
-                "parallel_keystore_generation is only supported for 1 validator client per participant (for now)"
-            )
-
-        # If the num validator keys per node is not divisible by vc_count of a participant, fail
-        if (
-            participant["vc_count"] > 0
-            and result["network_params"]["num_validator_keys_per_node"]
-            % participant["vc_count"]
-            != 0
-        ):
-            fail(
-                "num_validator_keys_per_node: {0} is not divisible by vc_count: {1} for participant: {2}".format(
-                    result["network_params"]["num_validator_keys_per_node"],
-                    participant["vc_count"],
-                    str(index + 1)
-                    + "-"
-                    + participant["el_type"]
-                    + "-"
-                    + participant["cl_type"],
-                )
-            )
-
         snooper_enabled = participant["snooper_enabled"]
         if snooper_enabled == None:
             participant["snooper_enabled"] = result["snooper_enabled"]
@@ -781,10 +796,6 @@ def parse_network_params(plan, input_args):
             + " is not supported, it can only be mainnet or minimal"
         )
 
-    if result["network_params"]["preset"] == "minimal":
-        if result["network_params"]["deneb_fork_epoch"] > 0:
-            fail("minimal preset only supports deneb genesis fork epoch")
-
     return result
 
 
@@ -878,10 +889,12 @@ def default_input_args(input_args):
         "keymanager_enabled": False,
         "checkpoint_sync_enabled": False,
         "checkpoint_sync_url": "",
+        "ethereum_genesis_generator_params": get_default_ethereum_genesis_generator_params(),
         "port_publisher": {
             "nat_exit_ip": constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
             "public_port_start": None,
         },
+        "spamoor_params": get_default_spamoor_params(),
     }
 
 
@@ -902,20 +915,25 @@ def default_network_params():
         "eth1_follow_distance": 2048,
         "min_validator_withdrawability_delay": 256,
         "shard_committee_period": 256,
+        "altair_fork_epoch": 0,
+        "bellatrix_fork_epoch": 0,
+        "capella_fork_epoch": 0,
         "deneb_fork_epoch": 0,
         "electra_fork_epoch": constants.ELECTRA_FORK_EPOCH,
         "fulu_fork_epoch": constants.FULU_FORK_EPOCH,
-        "eip7594_fork_epoch": constants.EIP7594_FORK_EPOCH,
-        "eip7594_fork_version": "0x60000038",
         "network_sync_base_url": "https://snapshots.ethpandaops.io/",
         "data_column_sidecar_subnet_count": 128,
         "samples_per_slot": 8,
         "custody_requirement": 4,
-        "max_blobs_per_block": 6,
+        "max_blobs_per_block_electra": 9,
+        "target_blobs_per_block_electra": 6,
+        "max_blobs_per_block_fulu": 12,
+        "target_blobs_per_block_fulu": 9,
         "preset": "mainnet",
         "additional_preloaded_contracts": {},
         "devnet_repo": "ethpandaops",
         "prefunded_accounts": {},
+        "gossip_max_size": 10485760,
     }
 
 
@@ -936,20 +954,25 @@ def default_minimal_network_params():
         "eth1_follow_distance": 16,
         "min_validator_withdrawability_delay": 256,
         "shard_committee_period": 64,
+        "altair_fork_epoch": 0,
+        "bellatrix_fork_epoch": 0,
+        "capella_fork_epoch": 0,
         "deneb_fork_epoch": 0,
         "electra_fork_epoch": constants.ELECTRA_FORK_EPOCH,
         "fulu_fork_epoch": constants.FULU_FORK_EPOCH,
-        "eip7594_fork_epoch": constants.EIP7594_FORK_EPOCH,
-        "eip7594_fork_version": "0x60000038",
         "network_sync_base_url": "https://snapshots.ethpandaops.io/",
         "data_column_sidecar_subnet_count": 128,
         "samples_per_slot": 8,
         "custody_requirement": 4,
-        "max_blobs_per_block": 6,
+        "max_blobs_per_block_electra": 9,
+        "target_blobs_per_block_electra": 6,
+        "max_blobs_per_block_fulu": 12,
+        "target_blobs_per_block_fulu": 9,
         "preset": "minimal",
         "additional_preloaded_contracts": {},
         "devnet_repo": "ethpandaops",
         "prefunded_accounts": {},
+        "gossip_max_size": 10485760,
     }
 
 
@@ -985,7 +1008,6 @@ def default_participant():
         "vc_type": "",
         "vc_image": "",
         "vc_log_level": "",
-        "vc_count": 1,
         "vc_extra_env_vars": {},
         "vc_extra_labels": {},
         "vc_extra_params": [],
@@ -1032,14 +1054,15 @@ def get_default_gwyneth_params():
 
 def get_default_blockscout_params():
     return {
-        "image": "blockscout/blockscout:6.8.0",
-        "verif_image": "ghcr.io/blockscout/smart-contract-verifier:v1.9.0",
+        "image": "blockscout/blockscout:latest",
+        "verif_image": "ghcr.io/blockscout/smart-contract-verifier:latest",
+        "frontend_image": "ghcr.io/blockscout/frontend:latest",
     }
 
 
 def get_default_dora_params():
     return {
-        "image": "ethpandaops/dora:latest",
+        "image": constants.DEFAULT_DORA_IMAGE,
         "env": {},
     }
 
@@ -1104,7 +1127,7 @@ def get_default_mev_params(mev_type, preset, input_args):
         mev_boost_image = constants.DEFAULT_COMMIT_BOOST_MEV_BOOST_IMAGE
         mev_builder_cl_image = DEFAULT_CL_IMAGES[constants.CL_TYPE.lighthouse]
         mev_builder_extra_data = (
-            "0x436f6d6d69742d426f6f737420f09f93bb"  # Commit-Boost 📻
+            "0x436F6D6D69742D426F6F737420F09F93BB"  # Commit-Boost 📻
         )
 
     if mev_type == constants.GWYNETH_MEV_TYPE:
@@ -1151,13 +1174,9 @@ def get_default_tx_spammer_params():
     }
 
 
-def get_default_goomy_blob_params():
-    return {"image": "ethpandaops/goomy-blob:master", "goomy_blob_args": []}
-
-
 def get_default_assertoor_params():
     return {
-        "image": "ethpandaops/assertoor:latest",
+        "image": constants.DEFAULT_ASSERTOOR_IMAGE,
         "run_stability_check": False,
         "run_block_proposal_check": False,
         "run_lifecycle_test": False,
@@ -1207,6 +1226,29 @@ def get_default_xatu_sentry_params():
             "contribution_and_proof",
             "blob_sidecar",
         ],
+    }
+
+
+def get_default_spamoor_params():
+    return {
+        "image": "ethpandaops/spamoor:latest",
+        "scenario": "eoatx",
+        "throughput": 1000,
+        "max_pending": 1000,
+        "max_wallets": 500,
+        "spamoor_extra_args": [],
+    }
+
+
+def get_default_spamoor_blob_params():
+    return {
+        "image": "ethpandaops/spamoor:latest",
+        "scenario": "blob-combined",
+        "throughput": 3,
+        "max_blobs": 2,
+        "max_pending": 6,
+        "max_wallets": 29,
+        "spamoor_extra_args": [],
     }
 
 
@@ -1373,7 +1415,7 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
 
     if mev_type == constants.MEV_RS_MEV_TYPE:
         mev_participant = default_participant()
-        mev_participant["el_type"] = constants.EL_TYPE.reth
+        mev_participant["el_type"] = "reth-builder"
         mev_participant.update(
             {
                 "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
@@ -1432,9 +1474,11 @@ def docker_cache_image_override(plan, result):
         "mev_params.mev_flood_image",
         "xatu_sentry_params.xatu_sentry_image",
         "tx_spammer_params.image",
-        "goomy_blob_params.image",
         "prometheus_params.image",
         "grafana_params.image",
+        "spamoor_params.image",
+        "spamoor_blob_params.image",
+        "ethereum_genesis_generator_params.image",
     ]
 
     if result["docker_cache_params"]["url"] == "":
@@ -1506,3 +1550,9 @@ def docker_cache_image_override(plan, result):
                     tooling_image_key
                 )
             )
+
+
+def get_default_ethereum_genesis_generator_params():
+    return {
+        "image": constants.DEFAULT_ETHEREUM_GENESIS_GENERATOR_IMAGE,
+    }

@@ -88,10 +88,15 @@ FLASHBOTS_MEV_TYPE = "flashbots"
 MEV_RS_MEV_TYPE = "mev-rs"
 COMMIT_BOOST_MEV_TYPE = "commit-boost"
 GWYNETH_MEV_TYPE = "gwyneth"
+DEFAULT_DORA_IMAGE = "ethpandaops/dora:latest"
+DEFAULT_ASSERTOOR_IMAGE = "ethpandaops/assertoor:latest"
 
 DEFAULT_SNOOPER_IMAGE = "ethpandaops/rpc-snooper:latest"
+DEFAULT_ETHEREUM_GENESIS_GENERATOR_IMAGE = (
+    "ethpandaops/ethereum-genesis-generator:3.5.1"
+)
 DEFAULT_FLASHBOTS_RELAY_IMAGE = "flashbots/mev-boost-relay:0.29.2a3"
-DEFAULT_FLASHBOTS_BUILDER_IMAGE = "ethpandaops/rbuilder:develop"
+DEFAULT_FLASHBOTS_BUILDER_IMAGE = "ethpandaops/reth-rbuilder:develop"
 DEFAULT_FLASHBOTS_MEV_BOOST_IMAGE = "flashbots/mev-boost"
 DEFAULT_MEV_RS_IMAGE = "ethpandaops/mev-rs:main"
 DEFAULT_MEV_RS_IMAGE_MINIMAL = "ethpandaops/mev-rs:main-minimal"
@@ -107,6 +112,7 @@ DEFAULT_MNEMONIC = "giant issue aisle success illegal bike spike question tent b
 PRIVATE_IP_ADDRESS_PLACEHOLDER = "KURTOSIS_IP_ADDR_PLACEHOLDER"
 
 GENESIS_FORK_VERSION = "0x10000038"
+ALTAIR_FORK_VERSION = "0x20000038"
 BELLATRIX_FORK_VERSION = "0x30000038"
 CAPELLA_FORK_VERSION = "0x40000038"
 DENEB_FORK_VERSION = "0x50000038"
@@ -114,8 +120,6 @@ ELECTRA_FORK_VERSION = "0x60000038"
 ELECTRA_FORK_EPOCH = 100000000
 FULU_FORK_VERSION = "0x70000038"
 FULU_FORK_EPOCH = 100000001
-EIP7594_FORK_VERSION = "0x80000038"
-EIP7594_FORK_EPOCH = 100000002
 
 MAX_LABEL_LENGTH = 63
 
@@ -123,14 +127,6 @@ CONTAINER_REGISTRY = struct(
     dockerhub="/",
     ghcr="ghcr.io",
     gcr="gcr.io",
-)
-
-
-ETHEREUM_GENESIS_GENERATOR = struct(
-    capella_genesis="ethpandaops/ethereum-genesis-generator:2.0.12",  # Deprecated (no support for minimal config)
-    deneb_genesis="ethpandaops/ethereum-genesis-generator:3.4.1",  # Default
-    verkle_support_genesis="ethpandaops/ethereum-genesis-generator:3.0.0-rc.19",  # soon to be deneb genesis, waiting for rebase
-    verkle_genesis="ethpandaops/ethereum-genesis-generator:verkle-gen-v1.0.0",
 )
 
 NETWORK_NAME = struct(

@@ -33,5 +33,4 @@ gwyneth_params:
   # l2_networks: []
   blockscout: true
 
-additional_services:
-  - blockscout
+additional_services: [blockscout]

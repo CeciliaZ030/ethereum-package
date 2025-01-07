@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
       - uses: ./.github/actions/docker-login
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ethpandaops
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Setup Kurtosis
         uses: ./.github/actions/kurtosis-install
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
       - uses: ./.github/actions/docker-login
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ethpandaops
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Setup Kurtosis
         uses: ./.github/actions/kurtosis-install
@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v4
       - uses: ./.github/actions/docker-login
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ethpandaops
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Kurtosis Assertoor GitHub Action
         uses: ethpandaops/kurtosis-assertoor-github-action@v1
@@ -76,3 +76,16 @@ jobs:
           ethereum_package_url: "."
           ethereum_package_branch: ""
           ethereum_package_args: .github/tests/mix-assert.yaml
+  check_optimism_package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Kurtosis
+        uses: ./.github/actions/kurtosis-install
+      - name: Run L1
+        run: |
+          kurtosis run --enclave test ${{ github.workspace }} --args-file https://raw.githubusercontent.com/ethpandaops/optimism-package/refs/heads/main/.github/tests/external-l1/ethereum.yaml --verbosity detailed
+      - name: Run L2
+        run: |
+          kurtosis run --enclave test github.com/ethpandaops/optimism-package --args-file https://raw.githubusercontent.com/ethpandaops/optimism-package/refs/heads/main/.github/tests/external-l1/optimism.yaml --verbosity detailed

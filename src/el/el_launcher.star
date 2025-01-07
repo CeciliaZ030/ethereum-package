@@ -26,6 +26,7 @@ def launch(
     num_participants,
     port_publisher,
     mev_builder_type,
+    mev_params,
 ):
     empty_l2_networks = list() # Add per participant if exists
     el_launchers = {
@@ -79,6 +80,7 @@ def launch(
                 jwt_file,
                 network_params.network,
                 builder_type=mev_builder_type,
+                mev_params=mev_params,
             ),
             "launch_method": reth.launch,
         },
