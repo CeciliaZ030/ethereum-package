@@ -1,0 +1,37 @@
+participants:
+  - el_type: geth
+    cl_type: prysm
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['167010']
+    cl_type: lodestar
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['167010', '167011'] 
+    cl_type: lighthouse
+network_params:
+   # kurtosis minimal chain_id = 3151908
+  preset: "minimal"
+  prefunded_accounts: {
+    "0x25941dC771bB64514Fc8abBce970307Fb9d477e9": {"balance": "10ETH"},
+    "0x4107be99052d895e3ee461C685b042Aa975ab5c0": {"balance": "10ETH"},
+    "0x14dc79964da2c08b23698b3d3cc7ca32193d9955": {"balance": "10ETH"},
+    "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65": {"balance": "10ETH"},
+    "0x1cbd3b2770909d4e10f157cabc84c7264073c9ec": {"balance": "10ETH"},
+  }
+
+global_log_level: "info"
+mev_type: gwyneth
+mev_params:
+  mev_builder_image: gwyneth-rbuilder
+
+gwyneth_params:
+  rollup_contract: "0x9fCF7D13d10dEdF17d0f24C62f0cf4ED462f65b7"
+  # addr 0xE25583099BA105D9ec0A67f5Ae86D90e50036425
+  proposer_key: "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d" 
+  l2_networks: ['167010', '167011'] 
+  # l2_networks: []
+  blockscout: true
+
+additional_services: 
+  - blockscout
