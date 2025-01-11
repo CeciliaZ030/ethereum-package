@@ -2,12 +2,12 @@ participants:
   # TODO: hardcoded builder's EL endpoint l1_proposal_url = "http://el-1-gwyneth-teku:8545"
   - el_type: gwyneth
     el_image: gwyneth-reth
-    el_l2_networks: ['167010'] 
+    el_l2_networks: ['167010', '167011'] 
     cl_type: teku
-  - el_type: gwyneth
-    el_image: gwyneth-reth
-    el_l2_networks: ['167011'] 
-    cl_type: prysm
+  # - el_type: gwyneth
+  #   el_image: gwyneth-reth
+  #   el_l2_networks: ['167011'] 
+  #   cl_type: prysm
   - el_type: nethermind
     cl_type: prysm
 
@@ -31,5 +31,5 @@ gwyneth_params:
   proposer_key: "39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d" 
   l2_networks: ['167010', '167011'] 
 
-additional_services:
-  - blockscout
+# additional_services:
+#   - blockscout
