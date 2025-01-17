@@ -251,6 +251,7 @@ def get_config(
 
     if launcher.builder_type:
         cl_client_name = service_name.split("-")[4]
+        cmd.append("--builder.ignore-payload")
         cmd.append("--rbuilder.config={0}".format(flashbots_rbuilder.MEV_FILE_PATH_ON_CONTAINER))
         plan.print("Gwyneth reth-rbuilder cmd {0}".format(cmd))
         files[

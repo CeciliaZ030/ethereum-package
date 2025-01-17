@@ -278,6 +278,7 @@ def run(plan, args={}):
         or args_with_right_defaults.mev_type == constants.MEV_RS_MEV_TYPE
         or args_with_right_defaults.mev_type == constants.COMMIT_BOOST_MEV_TYPE
     ):
+        # TODO: use this as L1 propose url
         blocksim_uri = "http://{0}:{1}".format(
             all_el_contexts[-1].ip_addr, all_el_contexts[-1].rpc_port_num
         )
