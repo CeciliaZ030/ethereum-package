@@ -1,13 +1,14 @@
 participants:
-  # TODO: hardcoded builder's EL endpoint l1_proposal_url = "http://el-1-gwyneth-teku:8545"
+  # hardcoded builder's EL endpoint l1_proposal_url = "http://el-1-gwyneth-teku:8545"
+  # TODO: change in kurtosis
   - el_type: gwyneth
     el_image: gwyneth-reth
-    el_l2_networks: ['167010', '167011'] 
+    el_l2_networks: ['167010'] 
     cl_type: teku
-  # - el_type: gwyneth
-  #   el_image: gwyneth-reth
-  #   el_l2_networks: ['167011'] 
-  #   cl_type: prysm
+  - el_type: gwyneth
+    el_image: gwyneth-reth
+    el_l2_networks: ['167011'] 
+    cl_type: teku
   - el_type: nethermind
     cl_type: prysm
 
